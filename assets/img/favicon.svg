@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>DM</title>
+  <rect width="64" height="64" rx="14" fill="#0a0a0b"/>
+  <path fill="#f2ede4" fill-rule="evenodd" d="M8 18h10c6.6 0 11 4.9 11 14s-4.4 14-11 14H8zm7 6.5v15h2.6c3 0 4.4-2.3 4.4-7.5s-1.4-7.5-4.4-7.5z"/>
+  <path fill="#f2ede4" d="M32 46V18h7.6l3.9 13.5L47.4 18H55v28h-6.4V29l-2.9 10.5h-4.4L38.4 29v17z"/>
+  <circle cx="53" cy="10.5" r="4.5" fill="#ff453a"/>
+</svg>

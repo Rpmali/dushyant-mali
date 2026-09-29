@@ -1,0 +1,21 @@
+# Operating system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor and IDE folders
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# Tools (this site needs no install step)
+node_modules/
+npm-debug.log*

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <!--
+    Why this page uses <base href>:
+    GitHub Pages shows this 404 page for ANY missing address, however deep,
+    for example /dushyant-mali/work/old/page. Normal relative links such as
+    "assets/css/styles.css" would then point to /dushyant-mali/work/old/assets/...
+    and the page would lose its styling. The <base> line below makes every
+    relative link on this page start from the project folder instead.
+    If you move the site to your own domain (served from the root, "/"),
+    change it to: <base href="/">
+    (Opening this file directly from your computer shows it unstyled; that is
+    expected. Use the local server described in README.md to preview it.)
+  -->
+  <base href="/dushyant-mali/">
+  <title>Page not found | Dushyant Mali</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Oswald:wght@500;600&amp;display=swap">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <!-- No skip link here: the header holds a single link, so there is nothing to
+       skip, and with <base href> a "#main" link would navigate to the homepage. -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="wordmark" href="./">
+        <span class="wordmark__dot" aria-hidden="true"></span>
+        <span>Dushyant Mali</span>
+      </a>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section class="nf container" aria-labelledby="nf-title">
+      <div>
+        <div class="nf__screen" aria-hidden="true">
+          <span class="vf-frame nf__vf"></span>
+          <div class="nf__bars"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <p class="nf__label">No signal &middot; 404</p>
+        </div>
+        <h1 class="nf__title" id="nf-title">This page is out of frame</h1>
+        <p class="nf__text">The page you were looking for does not exist or has moved. Everything is on the homepage.</p>
+        <a class="btn btn--primary" href="./">Back to the homepage</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
