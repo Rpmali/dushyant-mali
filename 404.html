@@ -27,6 +27,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Oswald:wght@500;600&amp;display=swap">
   <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/motion.css">
 </head>
 <body>
   <!-- No skip link here: the header holds a single link, so there is nothing to
@@ -42,11 +43,14 @@
 
   <main id="main" tabindex="-1">
     <section class="nf container" aria-labelledby="nf-title">
+      <!-- Letterbox bars that open on load (CSS only, off under "reduced motion"). -->
+      <div class="nf__lb nf__lb--top" aria-hidden="true"></div>
+      <div class="nf__lb nf__lb--bottom" aria-hidden="true"></div>
       <div>
         <div class="nf__screen" aria-hidden="true">
           <span class="vf-frame nf__vf"></span>
           <div class="nf__bars"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          <p class="nf__label">No signal &middot; 404</p>
+          <p class="nf__label"><span class="rec__dot nf__dot"></span>No signal &middot; 404</p>
         </div>
         <h1 class="nf__title" id="nf-title">This page is out of frame</h1>
         <p class="nf__text">The page you were looking for does not exist or has moved. Everything is on the homepage.</p>

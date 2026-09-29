@@ -44,6 +44,9 @@ Any field left as `""` (empty) is simply hidden, so the page never shows an empt
 | `contact.youtube` | The full link to your YouTube channel. | `"https://www.youtube.com/@yourchannel"` |
 | `showreel.video` | A YouTube or Vimeo link. Adds a "Play showreel" button at the top of the page. | `"https://youtu.be/VIDEO_ID_HERE"` |
 | `showreel.poster` | Optional wide picture used as the background at the top of the page. | `"assets/img/poster.jpg"` |
+| `showreel.clips` | Optional short muted clips that play behind the top of the page in the animated version (see "Motion and the animation switch"). | `["assets/video/clip-1.mp4"]` |
+| `motion.intro` | `true` shows the short 3-2-1 countdown once per visit; `false` switches it off. | `true` |
+| `grade.before`, `grade.after` | Optional pair of pictures of the **same size**: a raw frame and your graded version. When both are set, a before/after slider appears above the services. | `"assets/img/before.jpg"`, `"assets/img/after.jpg"` |
 | `services` | Your services. Each has a `title`, a `description` and a list of `points`. They are also the choices in the contact form. Delete any you do not offer. | see `content.js` |
 | `process` | The steps of working with you. Each has a `title` and a `text`. | see `content.js` |
 | `projects` | Your videos (see the next section). While empty, the Work section says new work is being added. | see below |
@@ -122,6 +125,7 @@ For more videos, use this shape instead: one `{ ... },` block per video, all ins
 | `role` | optional | What you did, e.g. `"Shot & edited"`. |
 | `description` | optional | One or two sentences. |
 | `featured` | optional | Write `featured: true,` to show this video first. |
+| `preview` | optional | A short silent clip, e.g. `"assets/video/wedding-preview.mp4"`, that plays on the card while the mouse is over it (see "Motion and the animation switch"). Never on phones. |
 
 **Links that work for `video`**
 
@@ -156,6 +160,104 @@ Tips:
   and looks sharp.
 - Card thumbnails (`thumbnail`) and the showreel `poster` are uploaded the same way. Wide
   (16:9) pictures suit them best.
+
+---
+
+## Motion and the animation switch
+
+The page has an animated version that runs on top of the plain one: a short 3-2-1 film countdown
+on the first visit, letterbox bars that open over the top of the page, the name revealed letter by
+letter, an animated light-leak background, a small editing-timeline bar along the bottom of the
+screen on desktop (a thin red progress line on phones), smooth scrolling on desktop, and elements
+that reveal as you scroll.
+
+- **The switch.** The small pause/play button at the top right of the first screen turns the
+  animation off and on. The choice is remembered on that device. When it is off, the page looks
+  and behaves exactly like the plain version, and the countdown never plays.
+- **Reduced motion.** Visitors whose phone or computer asks for less motion ("Reduce motion" in
+  their settings) always get the plain version. Nothing on the page depends on the animation.
+- **Phones, tablets and lower-powered computers** get a lighter version automatically: no WebGL
+  background (a soft CSS light leak instead), no custom cursor, no film strip. A laptop counts as
+  lower-powered when it reports 4 processor cores or fewer, 4 GB of memory or less, or has data
+  saver switched on; it keeps smooth scrolling, phones and tablets keep native scrolling.
+- **The countdown** plays once per visit (per browser tab session) and is skipped with a click, a
+  tap or any key. To switch it off for everyone, set `intro: false` under `motion` in
+  `content.js`. It never plays while the notes box for the owner is showing.
+
+What each section does in the animated version:
+
+- **Work.** With **four or more** videos, on a desktop computer with enough power (see the
+  lighter version above), the cards become a film strip with sprocket holes that moves sideways
+  as the visitor scrolls (or drags it with the mouse), with a frame counter ("03 / 09") and an
+  "End of reel" frame that leads to the contact form. The filter buttons stay above it. With
+  fewer videos, on tablets and phones, or on a lower-powered computer, the normal grid stays and
+  the cards slide in from the side. Hovering a card gives a very short red/cream "glitch" split.
+  With no videos yet, the standby panel gets a slow scan line and a breathing REC dot.
+- **The player** opens through a shutter: a black iris closes over the page from the card you
+  clicked and the player opens through another. The video still loads only when clicked.
+- **Services.** The cards clap in like a clapperboard stick and their numbers count up; on a
+  desktop they tilt slightly toward the mouse. The optional before/after slider (below) sits
+  above them.
+- **Process.** A small clapperboard in the corner snaps shut as each step appears, and an
+  "Export" bar fills along the ruler as the visitor scrolls, ending in a green "Export complete".
+- **About.** The portrait panel drifts slowly against the text and tilts toward the mouse, and a
+  band under the section scrolls your service titles (taken from `services` in `content.js`).
+- **Contact.** A large "LET'S SHOOT" line slides in word by word. After "Send on WhatsApp" or
+  "Send by email" the button shows a short "Exporting..." bar and a tick, purely as feedback: the
+  app is opened first, in the same click, exactly as in the plain version. If a field is missing,
+  the fields at fault shake once.
+
+### Preview clips on the video cards (optional)
+
+Give a project a `preview` (see "Add a video"): a short muted clip that plays on its card while
+the mouse is over it and stops when it leaves. Only one preview plays at a time, nothing is
+downloaded until the first hover, and phones never play them. Use the same export settings as
+the clips below (6 to 10 seconds, 720p, H.264 `.mp4` or `.webm` under 2 MB) and upload the file
+to `assets/video`. A clip that cannot be found is skipped silently (a note goes to the browser
+console) and the card keeps its picture.
+
+### Before/after slider (optional)
+
+Under `grade` in `content.js`, set `before` to a raw frame and `after` to your graded version of
+the **same frame, exported at the same width and height** (for example both 1600 x 900). A slider
+then appears above the services: visitors drag the line, or use the arrow keys, to compare the
+two. Leave both `""` to hide it. Unlike the rest of the animation, the slider is content, so it
+also shows with the animation switched off and for visitors who asked for less motion. If the
+two pictures differ in size, a note is written to the browser console because they would not
+line up; a picture that cannot be loaded hides the slider, with a note in the console.
+
+### Short clips behind the top of the page (optional)
+
+Instead of the animated light leak, you can play a few seconds of your own footage behind your name.
+
+1. Export clips of **6 to 10 seconds**, **720p**, **muted** (sound is never played), as
+   **H.264 `.mp4` under 2 MB each**. A `.webm` copy of the same clip is optional and smaller.
+2. Upload them to a folder called `assets/video` (create it on GitHub with **Add file** >
+   **Upload files**).
+3. In `content.js`, list them under `showreel`:
+
+```js
+  showreel: {
+    video: "",
+    poster: "assets/img/poster.jpg",
+    clips: ["assets/video/clip-1.mp4", "assets/video/clip-2.mp4"],
+  },
+```
+
+The clips play one after another and repeat, only while that part of the page is on screen, and
+only in the animated version (never for visitors who asked for less motion). The `poster` picture
+is shown before the first clip starts. To offer a `.webm` copy of a clip, list it **right before**
+the `.mp4` with the same name (`"assets/video/clip-1.webm", "assets/video/clip-1.mp4"`): the browser
+plays the first one it can. A clip that cannot be found or played is skipped and the other clips
+carry on; only when none of them can play does the light leak come back. Either way a note is
+written to the browser console.
+
+### Libraries
+
+The animation uses three small libraries, copied into `assets/vendor/` so nothing is ever loaded
+from another server: **GSAP 3.15** with its ScrollTrigger plugin (GreenSock's "Standard" licence,
+no charge, free for commercial use, https://gsap.com/standard-license) and **Lenis 1.3** (MIT
+licence). The licence texts are in `assets/vendor/LICENSES.md`.
 
 ---
 
@@ -268,9 +370,55 @@ If you buy your own domain (for example `www.yourname.com`):
   (180 x 180) are plain images; replace them with files of the same size and name if the design
   changes. `favicon.svg` is the "DM" logo with the red recording dot.
 - **Accessibility and motion.** Skip link, keyboard-friendly menu and player, labelled form fields
-  with spoken error messages, and WCAG AA colour contrast. The hero's blinking REC dot and running
-  timecode can be paused with the button in its top-right corner, and all animation is switched
-  off for visitors whose device asks for reduced motion.
+  with spoken error messages, and WCAG AA colour contrast. The button in the top-right corner of
+  the hero is the animation switch (it pauses the timecode and turns the whole animation layer off
+  or on), and all animation is switched off for visitors whose device asks for reduced motion.
+- **The animation layer is optional.** `index.html` loads, after `main.js`, the vendored
+  libraries (`assets/vendor/`), then `assets/js/hero-fx.js` (the WebGL light leak) and
+  `assets/js/motion.js`, with `assets/css/motion.css` after `styles.css`. `main.js` only tells
+  the layer what happened through events on `document` (`site:rendered`, `player:open` with a
+  `proceed()` it may hold for at most 600 ms, `player:close`, `work:filter`, `contact:send`,
+  `contact:invalid`) and exposes the rendered content as `window.SITE_RENDERED`. `motion.js`
+  runs only when `motionAllowed()` is true (no reduced-motion setting, switch not off, libraries
+  loaded) and picks a `full` or `lite` tier (touch, coarse pointer, 4 or fewer cores, 4 GB or
+  less memory, or data saver). Everything it creates is torn down by the switch: tweens and
+  ScrollTriggers through a GSAP context (which also clears their inline styles), listeners,
+  observers and DOM nodes through its cleanup list (the helpers: `later(fn)` registers an undo,
+  `on()` is an `addEventListener` that is removed on stop, `track(fn)` keeps tweens made in a
+  callback inside the context, `whenVisible(el, cb)` is the pausing pattern for anything
+  continuous, `safely(name, fn)` logs instead of throwing). The section set pieces (film strip,
+  card glitch and previews, shutter, services, process, about, contact) live in section 8 of
+  `motion.js`. The film strip uses `gsap.matchMedia()` so it rebuilds itself when a window is
+  resized across 64em, and the before/after slider is built once at boot outside the switch
+  (it is content). `window.SiteMotion` exposes `allowed()`, `tier()`, `active()`, `start()`,
+  `stop()`, `scrollTo()`, `refresh()` and `lenis()` for tests and future code.
+  `window.__motionStats` counts hero and cursor frames so tests can prove the loops stop while
+  the tab is hidden. `404.html` has no JavaScript: its letterbox bars and breathing REC dot are
+  CSS only.
+- **Motion details worth knowing.** `start()` builds the scroll layer, the hero's start states
+  and countdown, and the timeline bar in the same task as the page render (so nothing flashes),
+  and the set pieces, cursor, shutter and reveals one frame later, after the first paint. The
+  switch button keeps one accessible name ("Turn animation off") and reports the state through
+  `aria-pressed`, as `main.js` does. While motion is off, `ScrollTrigger.disable()` stops the
+  library's own frame loop; `start()` enables it again. Lenis runs only on devices with a mouse
+  and hover; on a touchscreen laptop it registers its touch listeners too (they return at once,
+  native touch scrolling stays) and that small cost is accepted rather than dropping smooth
+  scrolling for every touchscreen laptop. Any focus that moves while Lenis animates (a Tab
+  during a smooth scroll) is honoured: the animation is cut and the browser's own focus scroll
+  wins. A direct link to a section (`.../#services`) is settled on again once the layer has
+  built, because the film strip's pin spacer and the marquee band push the sections down after
+  the browser's own jump; the switch never re-anchors.
+- **Size budget.** The animated version was built to a target of 260 KB of local JavaScript
+  (the three vendored libraries at their minified size plus `main.js`, `hero-fx.js` and
+  `motion.js` as written, unminified) and 220 KB of the site's own CSS and JavaScript.
+  `content.js` is counted separately because it is the owner's content and notes, not code
+  (about four fifths of it is comments). As shipped: libraries 136.2 KB, `main.js` 61.4 KB,
+  `hero-fx.js` 8.1 KB, `motion.js` 63.0 KB, so 268.6 KB of JavaScript, about 9 KB over the
+  target (the libraries and the foundation alone take 197.6 KB of it); own CSS and JavaScript
+  219.9 KB including `content.js`. The remaining overage is comments and readable layout in
+  `motion.js`; on the wire the files are gzipped (`motion.js` about 17 KB) and comments cost
+  nothing to parse, so the readable source was kept rather than stripped. Check with
+  `wc -c assets/vendor/*.js assets/js/*.js assets/css/*.css` before adding anything.
 
 ### File map
 
@@ -280,8 +428,13 @@ dushyant-mali/
 ├── 404.html                "page not found", shown by GitHub Pages
 ├── assets/
 │   ├── css/styles.css      all styling; colours and sizes are variables at the top
+│   ├── css/motion.css      styles of the animated version (only active when it is on)
 │   ├── js/content.js       YOUR CONTENT: the only file to edit day to day
 │   ├── js/main.js          builds the page from content.js
+│   ├── js/motion.js        the animation layer (countdown, hero, timeline bar, cursor, reveals, section set pieces)
+│   ├── js/hero-fx.js       the WebGL light-leak background behind your name
+│   ├── vendor/             GSAP, ScrollTrigger and Lenis, with LICENSES.md
+│   ├── video/              (create it) your short clips for showreel.clips and projects[].preview
 │   └── img/
 │       ├── favicon.svg          browser tab icon
 │       ├── apple-touch-icon.png home-screen icon (iPhone and iPad)

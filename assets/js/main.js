@@ -453,6 +453,19 @@
     return location.protocol === 'file:' || host === '' || host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
   }
 
+  /**
+   * Tell the optional animation layer (assets/js/motion.js) what happened.
+   * Returns false only when a listener called preventDefault() on a
+   * cancelable event. Never throws: the page must work without it.
+   */
+  function emit(name, detail, cancelable) {
+    try {
+      return document.dispatchEvent(new CustomEvent(name, { detail: detail || {}, cancelable: !!cancelable }));
+    } catch (e) {
+      return true;
+    }
+  }
+
   function hideSection(id) {
     const section = document.getElementById(id);
     if (section) section.hidden = true;
@@ -498,7 +511,10 @@
       about: list(s.about),
       photo: text(s.photo),
       contact: contact,
-      showreel: { video: text(reel.video), poster: text(reel.poster) },
+      // clips, motion and grade are only used by the animation layer (motion.js).
+      showreel: { video: text(reel.video), poster: text(reel.poster), clips: list(reel.clips) },
+      motion: s.motion && typeof s.motion === 'object' ? s.motion : {},
+      grade: s.grade && typeof s.grade === 'object' ? { before: text(s.grade.before), after: text(s.grade.after) } : { before: '', after: '' },
       services: objects(s.services, 'services')
         .filter(function (x) { return x && typeof x === 'object'; })
         .map(function (x) {
@@ -619,6 +635,7 @@
         role: text(p.role),
         description: text(p.description),
         thumbnail: text(p.thumbnail),
+        preview: text(p.preview), // optional short clip, used only by the animation layer
         featured: p.featured === true,
         video: video,
         link: video ? '' : linkUrl.href,
@@ -704,6 +721,9 @@
       ])
     ]));
     li.style.setProperty('--reveal-delay', ((position % 3) * 90) + 'ms');
+    // A relative clip path for the animation layer's hover preview (never a full address: the CSP only allows the site's own media).
+    const preview = item.preview ? assetSrc(item.preview) : '';
+    if (preview && !/^https?:/i.test(preview)) li.setAttribute('data-preview', preview);
     return li;
   }
 
@@ -742,6 +762,7 @@
         status.textContent = option.key === '*'
           ? 'Showing all ' + shown + ' projects.'
           : 'Showing ' + shown + ' ' + option.label + (shown === 1 ? ' project.' : ' projects.');
+        emit('work:filter', { category: option.key, label: option.label, shown: shown });
       });
       return button;
     });
@@ -1062,6 +1083,7 @@
           ? 'Please check one field: ' + labels[invalid[0].name] + '.'
           : 'Please check ' + invalid.length + ' fields: ' + invalid.map(function (f) { return labels[f.name]; }).join(', ') + '.';
         invalid[0].focus();
+        emit('contact:invalid', { fields: invalid.map(function (f) { return f.id; }) });
         return false;
       }
       status.className = 'form__status';
@@ -1108,16 +1130,21 @@
       const body = buildMessage(data);
 
       status.className = 'form__status';
+      let url;
       if (via === 'whatsapp') {
-        openExternal('https://wa.me/' + contact.whatsapp.digits + '?text=' + encodeURIComponent(body), true);
+        url = 'https://wa.me/' + contact.whatsapp.digits + '?text=' + encodeURIComponent(body);
+        openExternal(url, true);
         status.textContent = 'Opening WhatsApp with your message. If it does not open, message ' + contact.whatsapp.display + ' directly.';
       } else {
         const subject = 'Project enquiry' + (data.type ? ': ' + data.type : '') + ' (' + data.name + ')';
-        openExternal('mailto:' + contact.email +
+        url = 'mailto:' + contact.email +
           '?subject=' + encodeURIComponent(subject) +
-          '&body=' + encodeURIComponent(body.replace(/\n/g, '\r\n')), false);
+          '&body=' + encodeURIComponent(body.replace(/\n/g, '\r\n'));
+        openExternal(url, false);
         status.textContent = 'Opening your email app with your message. If nothing happens, write to ' + contact.email + ' directly.';
       }
+      // The app has already been opened above, in this same click; this is feedback only.
+      emit('contact:send', { method: via, url: url, submitter: event.submitter || null });
     });
   }
 
@@ -1171,6 +1198,7 @@
       const opener = playerOpener;
       playerOpener = null;
       if (opener && document.contains(opener)) opener.focus();
+      emit('player:close', { trigger: opener || null });
     });
   }
 
@@ -1181,28 +1209,42 @@
       return;
     }
     playerOpener = opener || document.activeElement;
-    $('#player-title').textContent = item.title;
-    clearPlayer();
+    let opened = false;
 
-    const frame = document.createElement('iframe');
-    frame.src = embedUrl(video);
-    frame.title = item.title + ' (video player)';
-    frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media');
-    frame.setAttribute('allowfullscreen', '');
-    frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-    $('#player-frame').appendChild(frame);
+    const proceed = function () {
+      if (opened) return;
+      opened = true;
+      $('#player-title').textContent = item.title;
+      clearPlayer();
 
-    const source = $('#player-source');
-    source.href = watchUrl(video);
-    source.textContent = '';
-    append(source, [
-      video.provider === 'youtube' ? 'Watch on YouTube' : 'Watch on Vimeo',
-      icon('external'),
-      el('span', { class: 'sr-only', text: ' (opens in a new tab)' })
-    ]);
+      const frame = document.createElement('iframe');
+      frame.src = embedUrl(video);
+      frame.title = item.title + ' (video player)';
+      frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media');
+      frame.setAttribute('allowfullscreen', '');
+      frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      $('#player-frame').appendChild(frame);
 
-    root.classList.add('is-dialog-open');
-    if (!player.open) player.showModal();
+      const source = $('#player-source');
+      source.href = watchUrl(video);
+      source.textContent = '';
+      append(source, [
+        video.provider === 'youtube' ? 'Watch on YouTube' : 'Watch on Vimeo',
+        icon('external'),
+        el('span', { class: 'sr-only', text: ' (opens in a new tab)' })
+      ]);
+
+      root.classList.add('is-dialog-open');
+      if (!player.open) player.showModal();
+    };
+
+    // The animation layer may hold the opening for a short shutter effect
+    // (preventDefault, then detail.proceed()). It can never hold it for long.
+    if (!emit('player:open', { title: item.title, video: video, trigger: playerOpener, proceed: proceed }, true)) {
+      setTimeout(proceed, 600);
+      return;
+    }
+    proceed();
   }
 
   /* ---- Mobile menu ---- */
@@ -1485,6 +1527,10 @@
         window.requestAnimationFrame(function () { target.scrollIntoView(); });
       }
     });
+
+    // The animation layer (motion.js) starts from here; it reads nothing before this point.
+    window.SITE_RENDERED = site;
+    emit('site:rendered', { site: site });
   }
 
   init();

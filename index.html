@@ -44,9 +44,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Oswald:wght@500;600&amp;display=swap">
   <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/motion.css">
 
   <script src="assets/js/content.js" defer></script>
   <script src="assets/js/main.js" defer></script>
+  <!-- The animation layer. Everything below is optional: the page works without it.
+       Libraries are vendored (see assets/vendor/LICENSES.md), never loaded from a CDN. -->
+  <script src="assets/vendor/gsap.min.js" defer></script>
+  <script src="assets/vendor/ScrollTrigger.min.js" defer></script>
+  <script src="assets/vendor/lenis.min.js" defer></script>
+  <script src="assets/js/hero-fx.js" defer></script>
+  <script src="assets/js/motion.js" defer></script>
 
   <script type="application/ld+json">
   {
@@ -108,6 +116,7 @@
           <span class="rec"><span class="rec__dot"></span><span id="rec-label">REC</span></span>
           <span class="timecode" id="timecode">00:00:00:00</span>
         </div>
+        <!-- The animation switch. main.js pauses the timecode; motion.js (when loaded) turns the whole animation layer off and on and renames the button. -->
         <button class="hud-toggle" id="motion-toggle" type="button" aria-pressed="false" aria-label="Pause animation">
           <svg class="icon icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6v12M15 6v12"/></svg>
           <svg class="icon icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg>

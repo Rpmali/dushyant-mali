@@ -115,9 +115,52 @@ window.SITE = {
   //   poster: optional background picture for the top of the page, e.g.
   //           "assets/img/poster.jpg" (upload it to assets/img first).
   //           A wide (landscape) picture works best.
+  //   clips:  optional short clips that play silently behind the top of
+  //           the page, in place of the animated light-leak background.
+  //           Upload them to assets/video first, then list their paths:
+  //             clips: ["assets/video/clip-1.mp4", "assets/video/clip-2.mp4"],
+  //           They play one after another and repeat, muted, only while
+  //           that part of the page is on screen. To offer a smaller .webm
+  //           copy of a clip, list it right before the .mp4 with the same
+  //           name (the browser plays the first one it can):
+  //             clips: ["assets/video/clip-1.webm", "assets/video/clip-1.mp4"],
+  //           Recommended: 6 to 10 seconds, 720p, H.264 .mp4 under 2 MB
+  //           each. The poster above is shown before the clip starts.
+  //           A clip that cannot be found is skipped and the others play.
+  //           Clips only play in the animated version of the page (the
+  //           button at the top right turns it off and on) and never for
+  //           visitors whose device asks for less motion.
   showreel: {
     video: "",
     poster: "",
+    clips: [],
+  },
+
+  // ---------------------------------------------------------------
+  // MOTION (optional)
+  // ---------------------------------------------------------------
+  // The page has an animated version (letterbox, timeline bar, smooth
+  // scrolling and so on). Visitors can turn it off with the button at
+  // the top right; it also stays off for anyone whose device asks for
+  // less motion. This setting only controls the intro:
+  //   intro: the short 3-2-1 film countdown shown once per visit when
+  //          the page opens (a click or any key skips it). Write false
+  //          to switch it off.
+  motion: {
+    intro: true,
+  },
+
+  // ---------------------------------------------------------------
+  // BEFORE / AFTER (optional)
+  // ---------------------------------------------------------------
+  // Show your colour grading: a slider above the services that compares
+  // the raw frame (before) with your graded version (after). Upload two
+  // pictures of the SAME width and height (e.g. both 1600 x 900) to the
+  // assets/img folder, then write their paths here. Leave both "" to
+  // hide the slider. Visitors drag the line or use the arrow keys.
+  grade: {
+    before: "",
+    after: "",
   },
 
   // ---------------------------------------------------------------
@@ -243,6 +286,12 @@ window.SITE = {
   //   role:        optional, what you did, e.g. "Shot & edited"
   //   description: optional, one or two sentences
   //   featured:    optional, write true to show this project first
+  //   preview:     optional short silent clip that plays on the card
+  //                while a visitor's mouse is over it (never on phones),
+  //                e.g. "assets/video/wedding-preview.mp4". Upload it to
+  //                the assets/video folder first: 6 to 10 seconds, 720p,
+  //                .mp4 (or .webm) under 2 MB. Only in the animated
+  //                version of the page.
   //
   // EXAMPLE (the links are placeholders and will not work). When you
   // are ready, it should look like this, with your own details:
