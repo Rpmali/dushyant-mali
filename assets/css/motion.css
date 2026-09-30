@@ -28,6 +28,11 @@
   --m-z-shutter: 100;
   --m-z-cursor: 110;
   --m-z-intro: 200;
+  --m-cam-line: rgba(242, 237, 228, 0.82);         /* the camera's outlines in the intro */
+  --m-cam-body: #141416;                           /* its body, a shade above the background */
+  --m-flash: #ffffff;                              /* the one flash */
+  --m-sheen: rgba(255, 255, 255, 0.85);            /* the light sweep over the name */
+  --m-stamp: #ffb257;                              /* the role line's date-stamp amber: 6:1 over the light leak, where the red is 3.2:1 */
 }
 
 /* ---------- 2. Motion-on overrides ---------- */
@@ -72,7 +77,320 @@ html.motion-on .work-grid.is-skewing {
   will-change: transform;
 }
 
-/* ---------- 3. Countdown intro (film leader) ---------- */
+/* ---------- 3. Intros: "The Shot" (default) and the film-leader countdown ---------- */
+/* "The Shot": a camera arrives, focuses, fires once, and the print it takes becomes the
+   page. Everything is transform, opacity and one clip-path; the print's "develop" is the
+   only filter, and only on the full tier. The overlay sits above the cursor and the bar. */
+html.motion-on .shot {
+  position: fixed;
+  inset: 0;
+  z-index: var(--m-z-intro);
+  overflow: hidden;
+  background: var(--c-bg);
+  color: var(--c-text);
+  cursor: none;
+}
+
+html.motion-on .shot__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--bar);
+  background: var(--c-black);
+}
+
+html.motion-on .shot__bar--t { top: 0; border-bottom: 1px solid var(--c-line); }
+html.motion-on .shot__bar--b { bottom: 0; border-top: 1px solid var(--c-line); }
+
+/* The sensor read-out: one thin line down the screen. */
+html.motion-on .shot__scan {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--m-cam-line) 25% 75%, transparent);
+  opacity: 0;
+  will-change: transform;
+}
+
+/* HUD: corner ticks, a PWR lamp (top right) and the exposure read-outs (top left, where the
+   hero's own REC takes over); the skip hint has the bottom edge to itself. */
+html.motion-on .shot__hud {
+  position: absolute;
+  inset: calc(var(--bar) + 0.875rem) 0.875rem;
+  opacity: 0;
+  font: 500 var(--fs-xs)/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+  pointer-events: none;
+}
+
+html.motion-on .shot__vf {
+  --vf-c: var(--c-text-3);
+  --vf-l: 1.25rem;
+  inset: 0;
+}
+
+html.motion-on .shot__pwr {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.35;
+}
+
+html.motion-on .shot__pwr-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--c-text-3);
+}
+
+html.motion-on .shot__pwr.is-on .shot__pwr-dot {
+  background: var(--m-ok);
+  box-shadow: 0 0 0 3px rgba(61, 220, 132, 0.2);
+}
+
+html.motion-on .shot__meter {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  opacity: 0;
+  display: flex;
+  gap: 0.4rem 1.25rem;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+html.motion-on .shot__key {
+  color: var(--c-text-3);
+  margin-right: -0.9rem;
+}
+
+/* Each read-out is a 1-line window over 3 stacked values; the stack is moved up (slot machine). */
+html.motion-on .shot__roll {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  vertical-align: top;
+}
+
+html.motion-on .shot__roll-in {
+  display: block;
+}
+
+html.motion-on .shot__roll-in span {
+  display: block;
+  height: 1em;
+}
+
+/* The camera, an inline SVG drawn by its strokes; 3D transforms on its wrapper. The vh terms
+   here and below keep the camera, the brackets and the print inside a landscape phone. */
+html.motion-on .shot__stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(74vw, 30rem, 92vh);
+  transform: translate(-50%, -50%);
+}
+
+html.motion-on .shot__cam {
+  width: 100%;
+  transform-origin: 50% 50%;
+  opacity: 0;
+}
+
+html.motion-on .shot__cam.is-moving,
+html.motion-on .shot__print.is-moving {
+  will-change: transform;
+}
+
+html.motion-on .shot__cam svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+html.motion-on .shot__ln {
+  fill: var(--m-cam-body);
+  stroke: var(--m-cam-line);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+html.motion-on .shot__ln--thin { stroke-width: 1; stroke-opacity: 0.55; }
+html.motion-on .shot__ln--dark { fill: #0c0c0e; }
+html.motion-on .shot__ln--glassy { fill: #2b2b31; }
+html.motion-on .shot__ln--btn { fill: rgba(242, 237, 228, 0.3); }
+html.motion-on .shot__ring { fill: none; stroke: var(--m-cam-line); stroke-width: 2.5; stroke-opacity: 0.85; opacity: 0; }
+html.motion-on .shot__blade { fill: #26262c; stroke: var(--m-cam-line); stroke-width: 0.75; stroke-opacity: 0.5; }
+html.motion-on .shot__rec { fill: var(--c-rec); }
+
+/* Autofocus brackets: hunt, then lock in the accent red. */
+html.motion-on .shot__focus {
+  --vf-c: rgba(242, 237, 228, 0.85);
+  --vf-l: 1.75rem;
+  --vf-w: 2px;
+  top: 50%;
+  left: 50%;
+  width: min(68vw, 27rem, 86vh);
+  aspect-ratio: 3 / 2;
+  opacity: 0;
+}
+
+html.motion-on .shot__focus.is-locked {
+  --vf-c: var(--c-rec);
+}
+
+/* The print: a white-bordered 3:2 still with a miniature of the hero inside. */
+html.motion-on .shot__print {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(78vw, 46rem, 100vh);
+  aspect-ratio: 3 / 2;
+  background: var(--c-text);
+  opacity: 0;
+}
+
+/* The shadow and the picture are layers of their own: they dissolve while the print grows, so
+   that only the name is left when it is handed over to the page. */
+html.motion-on .shot__print-shadow {
+  position: absolute;
+  inset: 0;
+  box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.65);
+}
+
+html.motion-on .shot__print-img {
+  position: absolute;
+  inset: 3%;
+  overflow: hidden;
+  color: var(--c-text);
+}
+
+html.motion-on .shot__print-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 55% at 88% 12%, rgba(255, 69, 58, 0.22), transparent 62%),
+    radial-gradient(55% 50% at 8% 96%, rgba(242, 237, 228, 0.09), transparent 60%),
+    linear-gradient(180deg, #121214 0%, var(--c-bg) 100%);
+}
+
+html.motion-on .shot__print-bg::before,
+html.motion-on .shot__print-bg::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4.5%;
+  background: var(--c-black);
+}
+
+html.motion-on .shot__print-bg::before { top: 0; }
+html.motion-on .shot__print-bg::after { bottom: 0; }
+
+html.motion-on .shot__print-vf {
+  --vf-c: rgba(242, 237, 228, 0.6);
+  --vf-l: 6%;
+  --vf-w: 1.5px;
+  inset: 9% 5%;
+}
+
+html.motion-on .shot__print-hud,
+html.motion-on .shot__stamp {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font: 500 clamp(0.5rem, 1.9vw, 0.8125rem)/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+html.motion-on .shot__print-hud {
+  top: 11%;
+  left: 8%;
+}
+
+html.motion-on .shot__print-hud .rec__dot {
+  width: 0.55em;
+  height: 0.55em;
+  box-shadow: none;
+}
+
+/* The camera date-stamp, burnt into the corner of the picture, in the amber the hero's role
+   line holds afterwards: one device, one stamp colour. */
+html.motion-on .shot__stamp {
+  right: 8%;
+  bottom: 11%;
+  color: var(--m-stamp);
+  text-shadow: 0 0 0.5em rgba(255, 178, 87, 0.35);
+  opacity: 0;
+}
+
+/* The name in the picture mirrors .hero__title's text style: motion.js sizes and places it as
+   the h1 at 1/scale (line for line), so the grown print lands it exactly on the h1. The size,
+   position and width here are the fallback when there is no h1 to mirror. */
+html.motion-on .shot__print-name {
+  position: absolute;
+  left: 8%;
+  bottom: 18%;
+  max-width: 84%;
+  font: 800 clamp(1.125rem, 8.6vw, 5rem)/0.92 var(--font-name);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+html.motion-on .shot__print-line {
+  display: block;
+  white-space: nowrap;
+}
+
+/* Lite tier: the print develops through this white layer instead of a filter. */
+html.motion-on .shot__print-white {
+  position: absolute;
+  inset: 0;
+  background: var(--m-flash);
+  opacity: 0.94;
+}
+
+html.motion-on .shot__flash {
+  position: absolute;
+  inset: 0;
+  background: var(--m-flash);
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.motion-on .shot__curtain {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 51%;
+  background: var(--c-black);
+}
+
+html.motion-on .shot__curtain--t { top: 0; transform: translateY(-100%); }
+html.motion-on .shot__curtain--b { bottom: 0; transform: translateY(100%); }
+
+/* .shot is not a centred grid like .intro: the hint spans the width and centres its own text. */
+html.motion-on .shot .intro__hint {
+  left: 0;
+  right: 0;
+  z-index: 1;
+}
+
+/* The film-leader countdown (content.js: intro: "countdown"). */
 .intro {
   position: fixed;
   inset: 0;
@@ -162,6 +480,68 @@ html.motion-on .work-grid.is-skewing {
 .hero__ch {
   display: inline-block;
   transform-origin: 50% 100%;
+}
+
+html.motion-on .hero__title {
+  position: relative;
+}
+
+html.motion-on .hero__title.is-tilting {
+  will-change: transform;
+}
+
+/* Two tinted copies of the name (the RGB split, 200 ms) and a copy that only carries the
+   light sweep: clones of the split words, so they wrap exactly like the name, present only for
+   their moment (motion.js removes them), never selectable, so the h1 holds the name once. */
+html.motion-on .hero__rgb,
+html.motion-on .hero__sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html.motion-on .hero__rgb {
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+
+html.motion-on .hero__rgb--0 { color: var(--c-rec); }
+html.motion-on .hero__rgb--1 { color: var(--c-text); }
+
+html.motion-on .hero__sheen {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(105deg, transparent 38%, var(--m-sheen) 50%, transparent 62%) no-repeat;
+  background-size: 300% 100%;
+  background-position-x: 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* The role line stamps in like a camera date-stamp: it flickers in the accent red, then holds
+   in date-stamp amber, which keeps AA over the brightest patch of the light leak. */
+html.motion-on .hero__role {
+  color: var(--m-stamp);
+  text-shadow: 0 0 0.75rem rgba(255, 178, 87, 0.3);
+}
+
+/* The buttons slide in with a light sweep. */
+html.motion-on .hero__actions .btn {
+  position: relative;
+  overflow: hidden;
+}
+
+html.motion-on .btn__sheen {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: translateX(-130%);
+  pointer-events: none;
 }
 
 /* Letterbox panels: cover the top and bottom halves, then close to the bar height. */
@@ -994,8 +1374,8 @@ html.motion-on .about__media.is-moving {
 /* Contact: the display line, and the export bar that fills a button after a send. */
 html.motion-on .contact__display {
   grid-column: 1 / -1;
-  font: 600 clamp(3.25rem, 1.5rem + 9vw, 9.5rem)/0.9 var(--font-display);
-  letter-spacing: 0.01em;
+  font: 800 clamp(2.25rem, 0.75rem + 6.2vw, 6.25rem)/0.95 var(--font-name);
+  letter-spacing: 0;
   text-transform: uppercase;
   overflow-wrap: anywhere;
 }
@@ -1103,6 +1483,7 @@ html.motion-on .btn__fx .icon {
 /* ---------- 10. Reduced motion: belt and braces (motion.js never builds these) ---------- */
 @media (prefers-reduced-motion: reduce) {
   .intro,
+  .shot,
   .cur,
   .tl,
   .tl__progress,
@@ -1120,6 +1501,7 @@ html.motion-on .btn__fx .icon {
 /* ---------- 11. Print ---------- */
 @media print {
   .intro,
+  .shot,
   .cur,
   .tl,
   .tl__progress,

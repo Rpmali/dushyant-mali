@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://rpmali.github.io/dushyant-mali/sitemap.xml
+Sitemap: https://dushyant-mali.vercel.app/sitemap.xml

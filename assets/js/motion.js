@@ -9,7 +9,7 @@ const root = document.documentElement;
 const STORAGE_KEY = 'dm-motion-paused'; // same key as main.js: "1" = animation off
 const SESSION_KEY = 'dm-intro-played';
 const SECTION_IDS = ['work', 'services', 'process', 'about', 'contact'];
-const stats = window.__motionStats = window.__motionStats || { heroFrames: 0, cursorFrames: 0 };
+const stats = window.__motionStats = window.__motionStats || { heroFrames: 0, cursorFrames: 0, intro: '' };
 
 /* ---- 1. Gate and tier ---- */
 
@@ -105,6 +105,11 @@ function el(tag, attrs, children) {
   return node;
 }
 
+const sp = (cls, kids) => el('span', { class: cls }, kids);
+const dv = (cls, kids) => el('div', { class: cls }, kids);
+/** aria-hidden: decoration the screen reader skips. */
+const hid = (node) => { node.setAttribute('aria-hidden', 'true'); return node; };
+
 /** Register something to undo on stop(). */
 function later(fn) {
   if (typeof fn === 'function') cleanups.push(fn);
@@ -168,7 +173,7 @@ function siteData() {
     name: text(s.name),
     poster: text(reel.poster),
     clips: Array.isArray(reel.clips) ? reel.clips.map(text).filter(Boolean) : [],
-    intro: motion.intro !== false,
+    intro: motion.intro === false ? false : (motion.intro === 'countdown' ? 'countdown' : 'camera'),
     grade: { before: text(grade.before), after: text(grade.after) },
     services: Array.isArray(s.services) ? s.services : [],
     projects: Array.isArray(s.projects) ? s.projects : []
@@ -345,7 +350,7 @@ function splitTitle(title, name) {
       title.appendChild(document.createTextNode(' '));
       return;
     }
-    const word = el('span', { class: 'hero__word', 'aria-hidden': 'true' });
+    const word = hid(sp('hero__word'));
     graphemes(part).forEach((ch) => {
       const span = el('span', { class: 'hero__ch', text: ch });
       word.appendChild(span);
@@ -377,20 +382,353 @@ function introAllowed(site) {
   return true;
 }
 
-/** The 3-2-1 film leader. done() runs when the page is revealed, or at once when not allowed. */
+/* ---- 4a. Intros: content.js motion.intro is "camera" (The Shot, default), "countdown" or false.
+   done(opts) reveals the hero and returns its controls; opts: fromIntro, quick (a skip: about 300 ms),
+   landAt (the camera intro lands the name itself), force (the guard: shown without a GSAP tick). ---- */
+
+/** A scrolling key skips without scrolling the page away from the hero; Tab keeps its job. */
+function swallowScrollKey(e) {
+  if (e && e.type === 'keydown' && !e.ctrlKey && !e.metaKey && !e.altKey && /^( |Spacebar|PageDown|PageUp|ArrowDown|ArrowUp|End|Home)$/.test(e.key)) e.preventDefault();
+}
+
 function runIntro(site, done) {
   if (!introAllowed(site)) {
-    done();
+    done({});
     return;
   }
+  stats.intro = site.intro;
+  if (site.intro === 'countdown') runCountdown(done);
+  else runCamera(site, done);
+}
+
+const CAM = { w: 320, h: 250, cx: 176, cy: 148, glass: 40 };
+
+/** The camera, front view, as inline SVG: body, grip, flash unit, lens with 6 aperture blades. */
+function buildCamera() {
+  const c = CAM;
+  const strokes = [];
+  const shape = (tag, attrs, cls) => {
+    const node = svg(tag, attrs);
+    node.setAttribute('class', 'shot__ln' + (cls ? ' shot__ln--' + cls : ''));
+    strokes.push(node);
+    return node;
+  };
+  const at = (r, deg) => [c.cx + r * Math.cos(deg * Math.PI / 180), c.cy + r * Math.sin(deg * Math.PI / 180)];
+  // Six blades, each pivoting on the glass rim. Closed: the edge leaves the pivot 10 deg off the line
+  // to the centre (a small hole); rotating a blade 45 deg about its pivot opens it to 55 deg.
+  const blades = [];
+  const pivots = [];
+  for (let i = 0; i < 6; i += 1) {
+    const th = i * 60 - 90;
+    const p = at(c.glass, th);
+    const dir = (th + 180 + 10) * Math.PI / 180;
+    const len = 2 * c.glass * Math.cos(10 * Math.PI / 180);
+    const q = [p[0] + len * Math.cos(dir), p[1] + len * Math.sin(dir)];
+    let n = [-Math.sin(dir), Math.cos(dir)]; // a normal of the edge; flipped below to point away from the centre
+    const mid = [(p[0] + q[0]) / 2 - c.cx, (p[1] + q[1]) / 2 - c.cy];
+    if (mid[0] * n[0] + mid[1] * n[1] < 0) n = [-n[0], -n[1]];
+    const e = 2 * c.glass;
+    const pts = [p, q, [q[0] + e * n[0], q[1] + e * n[1]], [p[0] + e * n[0], p[1] + e * n[1]]];
+    const pivot = p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+    // Rotations are tweened as attribute strings ("rotate(a x y)"): GSAP interpolates the numbers.
+    blades.push(svg('path', { d: 'M' + pts.map((pt) => pt[0].toFixed(1) + ' ' + pt[1].toFixed(1)).join('L') + 'Z', class: 'shot__blade', transform: 'rotate(0 ' + pivot + ')' }));
+    pivots.push(pivot);
+  }
+  const stop = (offset, color, opacity) => svg('stop', { offset: offset, 'stop-color': color, 'stop-opacity': opacity });
+  const defs = svg('defs', {}, [
+    svg('radialGradient', { id: 'shot-glass', cx: '42%', cy: '38%', r: '70%' }, [stop(0, '#2a3040', 1), stop(0.55, '#0c0d12', 1), stop(1, '#050506', 1)]),
+    svg('linearGradient', { id: 'shot-spec', x1: 0, x2: 1, y1: 0, y2: 0 }, [stop(0, '#fff', 0), stop(0.5, '#fff', 0.38), stop(1, '#fff', 0)]),
+    svg('clipPath', { id: 'shot-glass-clip' }, [svg('circle', { cx: c.cx, cy: c.cy, r: c.glass })])
+  ]);
+  const rings = [
+    svg('g', { transform: 'rotate(-50 ' + c.cx + ' ' + c.cy + ')' }, [svg('circle', { cx: c.cx, cy: c.cy, r: 59, class: 'shot__ring', 'stroke-dasharray': '2 6' })]),
+    svg('g', { transform: 'rotate(40 ' + c.cx + ' ' + c.cy + ')' }, [svg('circle', { cx: c.cx, cy: c.cy, r: 51, class: 'shot__ring', 'stroke-dasharray': '1 9', 'stroke-width': '1.5' })])
+  ];
+  const spec = svg('rect', { x: -110, y: -70, width: 34, height: 140, fill: 'url(#shot-spec)' });
+  const rec = svg('circle', { cx: 262, cy: 108, r: 5, class: 'shot__rec' });
+  const fills = svg('g', { 'fill-opacity': 0 }, [
+    shape('rect', { x: 20, y: 94, width: 38, height: 120, rx: 14 }), // grip
+    shape('path', { d: 'M30 118h18M30 132h18M30 146h18' }, 'thin'),
+    shape('path', { d: 'M114 84L132 54H220L238 84Z' }), // prism / flash housing
+    shape('rect', { x: 162, y: 42, width: 28, height: 12, rx: 2 }, 'dark'), // hot shoe
+    shape('rect', { x: 44, y: 84, width: 244, height: 130, rx: 16 }), // body
+    shape('rect', { x: 140, y: 60, width: 72, height: 15, rx: 3 }, 'glassy'), // flash window
+    shape('circle', { cx: 94, cy: 66, r: 12 }), // mode dial
+    shape('path', { d: 'M94 56v7' }, 'thin'),
+    shape('circle', { cx: 258, cy: 70, r: 9 }), // dial
+    shape('path', { d: 'M258 63v5' }, 'thin'),
+    shape('circle', { cx: 39, cy: 86, r: 7 }, 'btn'), // shutter button
+    shape('circle', { cx: 116, cy: 110, r: 4 }, 'dark'), // AF lamp
+    shape('path', { d: 'M250 134h14M250 142h14M250 150h14' }, 'thin'), // ports
+    shape('circle', { cx: c.cx, cy: c.cy, r: 66 }), // lens barrel
+    rings[0], rings[1],
+    shape('circle', { cx: c.cx, cy: c.cy, r: 44 }, 'thin'), // glass rim
+    svg('circle', { cx: c.cx, cy: c.cy, r: 41, fill: 'url(#shot-glass)' }),
+    svg('g', { 'clip-path': 'url(#shot-glass-clip)' }, blades),
+    svg('ellipse', { cx: c.cx - 15, cy: c.cy - 16, rx: 9, ry: 6, fill: '#fff', opacity: 0.12 }),
+    svg('g', { 'clip-path': 'url(#shot-glass-clip)' }, [svg('g', { transform: 'translate(' + c.cx + ' ' + c.cy + ') rotate(22)' }, [spec])]),
+    rec
+  ]);
+  const node = svg('svg', { viewBox: '0 0 ' + c.w + ' ' + c.h, 'aria-hidden': 'true', focusable: 'false' }, [defs, fills]);
+  return { svg: node, strokes: strokes, fills: fills, rings: rings, blades: blades, pivots: pivots, spec: spec, rec: rec };
+}
+
+/** "The Shot". The page is fully rendered underneath (aria-hidden overlay); done(opts) reveals it. */
+function runCamera(site, done) {
+  const gsap = window.gsap;
+  const lite = tier !== 'full';
+  // Targets (seconds): camera in, autofocus, shutter, flash, develop, the print becomes the page.
+  const T = lite
+    ? { cam: 0.2, af: 0.85, shut: 1.25, flash: 1.35, dev: 1.55, grow: 1.85, growDur: 0.55, dissolve: 0.4 }
+    : { cam: 0.35, af: 1.4, shut: 2.14, flash: 2.24, dev: 2.45, grow: 3.2, growDur: 0.75, dissolve: 0.45 };
+  T.reveal = T.grow - 0.3; // the hero's entrance starts here, under the opaque overlay
+  T.land = T.grow + T.growDur;
+  T.end = T.land + 0.05;
+  const now = new Date();
+  const stamp = pad(now.getDate()) + ' ' + pad(now.getMonth() + 1) + ' ’' + String(now.getFullYear()).slice(-2);
+
+  const cam = buildCamera();
+  const camBox = dv('shot__cam', cam.svg);
+  const rolls = [];
+  const roll = (values) => {
+    const inner = sp('shot__roll-in', values.map((v) => el('span', { text: v })));
+    rolls.push(inner);
+    return sp('shot__roll', inner);
+  };
+  // Decorative, generic exposure values: they claim nothing about any real shot.
+  const meter = dv('shot__meter', [
+    el('span', { class: 'shot__key', text: 'ISO' }), roll(['100', '200', '400']),
+    el('span', { class: 'shot__key', text: 'F' }), roll(['5.6', '4', '2.8']),
+    roll(['1/60', '1/125', '1/250'])
+  ]);
+  const pwr = sp('shot__pwr', [sp('shot__pwr-dot'), 'PWR']);
+  const hud = dv('shot__hud', [sp('vf-frame shot__vf'), pwr, meter]);
+  const focus = sp('vf-frame shot__focus');
+  const stampEl = el('span', { class: 'shot__stamp', text: stamp });
+  const white = lite ? sp('shot__print-white') : null;
+  const nameEl = site.name ? el('div', { class: 'shot__print-name', text: site.name }) : null;
+  const picture = [sp('shot__print-bg'), sp('vf-frame shot__print-vf'), sp('shot__print-hud', [sp('rec__dot'), 'REC']), stampEl];
+  const printImg = dv('shot__print-img', picture.concat([nameEl, white]));
+  const shadow = sp('shot__print-shadow');
+  const print = dv('shot__print', [shadow, printImg]);
+  const flash = dv('shot__flash');
+  const curtains = [dv('shot__curtain shot__curtain--t'), dv('shot__curtain shot__curtain--b')];
+  const scan = dv('shot__scan');
+  const bars = [dv('shot__bar shot__bar--t'), dv('shot__bar shot__bar--b')];
+  const hint = el('p', { class: 'intro__hint', text: 'Click or press any key to skip' });
+  const overlay = hid(dv('shot' + (lite ? ' shot--lite' : ''), [
+    bars[0], bars[1], scan, dv('shot__stage', camBox), focus, print, flash, curtains[0], curtains[1], hud, hint
+  ]));
+  document.body.appendChild(overlay);
+
+  // Whatever happens, the overlay goes and the hero shows: end, skip, stop(), or the 6 s guard.
+  let finished = false;
+  let revealed = false;
+  let ctl = null; // the hero's controls once revealed: land(), hurry(), show()
+  let tl = null;
+  const reveal = (opts) => {
+    if (revealed) return;
+    revealed = true;
+    ctl = done(Object.assign({ fromIntro: true }, opts || {})) || null;
+  };
+  const handoff = () => {
+    if (nameEl) nameEl.style.visibility = 'hidden';
+    if (ctl) ctl.land();
+  };
+  // forced (the guard): show the hero even if GSAP has stopped ticking.
+  function finish(forced) {
+    if (finished) return;
+    finished = true;
+    clearTimeout(guard);
+    document.removeEventListener('keydown', skip);
+    if (tl) tl.kill();
+    gsap.killTweensOf(overlay);
+    overlay.remove();
+    if (!revealed) reveal({ quick: true, force: !!forced });
+    else if (ctl) {
+      if (forced) ctl.show();
+      else ctl.land();
+    }
+  }
+  function skip(e) {
+    swallowScrollKey(e);
+    if (finished || (tl && tl.time() >= T.land)) return; // handed over: it ends on its own
+    if (tl) tl.kill();
+    overlay.style.pointerEvents = 'none';
+    if (!revealed) reveal({ quick: true });
+    else if (ctl) { // the entrance already runs underneath: land the name, hurry the rest
+      handoff();
+      ctl.hurry();
+    }
+    gsap.to(overlay, { opacity: 0, duration: 0.2, ease: 'power2.out', onComplete: finish });
+  }
+  const guard = setTimeout(() => { finish(true); }, 6000);
+  document.addEventListener('keydown', skip);
+  overlay.addEventListener('pointerdown', skip);
+  later(() => { revealed = true; ctl = null; finish(); });
+
+  // Built a frame after first paint (DrawSVG measures every path); CSS hides all parts until then.
+  const build = () => {
+    if (finished) return;
+    const built = safely('camera intro', () => {
+    const draw = !!window.DrawSVGPlugin;
+    if (draw) gsap.registerPlugin(window.DrawSVGPlugin);
+    const origin = CAM.cx + ' ' + CAM.cy;
+    // A computed colour at alpha 0: "transparent" would tween through grey (GSAP reads it as white).
+    const clear = (color) => 'rgba(' + color.match(/\d+/g).slice(0, 3).join() + ',0)';
+    // The flash shrinks onto the print's resting frame (its layout box, ignoring transforms).
+    const frame = () => {
+      const t = Math.max(0, (window.innerHeight - print.offsetHeight) / 2).toFixed(0) + 'px ';
+      const l = Math.max(0, (window.innerWidth - print.offsetWidth) / 2).toFixed(0) + 'px';
+      return 'inset(' + t + l + ' ' + t + l + ')';
+    };
+    // The miniature: the h1 at 1/scale, line for line, placed so that the print grown by `scale`
+    // about the screen's centre lands it exactly on the h1; the hand-off then swaps the two unseen.
+    const mini = { scale: 1, w: 0, h: 0 };
+    const layoutMiniature = () => {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const pr = print.getBoundingClientRect(); // translate only here: its layout box
+      const w = pr.width;
+      const h = pr.height;
+      const title = $('#hero-title');
+      const r = title ? title.getBoundingClientRect() : null;
+      mini.w = W;
+      mini.h = H;
+      if (!w || !h) return;
+      // Covers the screen (a portrait one up to 1.5x its width, so the miniature stays legible); holds the h1.
+      let s = Math.max(W / w, Math.min(H / h, 1.5 * W / w));
+      if (!nameEl || !r || !r.width) {
+        mini.scale = 1.04 * s;
+        return;
+      }
+      const content = title.closest('.hero__content');
+      const ty = r.top - (content ? parseFloat(gsap.getProperty(content, 'y')) || 0 : 0); // the content starts 20 px low
+      s = Math.max(s, Math.max(H / 2 - ty, ty + r.height - H / 2) / (0.42 * h));
+      mini.scale = s = 1.04 * s;
+      const words = $$(':scope > .hero__word', title);
+      const rects = words.map((word) => word.getBoundingClientRect());
+      nameEl.textContent = '';
+      let line = null;
+      let top = null;
+      let prevRight = 0;
+      words.forEach((word, i) => {
+        const wt = Math.round(rects[i].top);
+        const clone = word.cloneNode(true);
+        [clone].concat($$('[style]', clone)).forEach((n) => { n.removeAttribute('style'); });
+        if (line && wt === top) clone.style.marginLeft = (rects[i].left - prevRight) / s + 'px';
+        else {
+          line = nameEl.appendChild(sp('shot__print-line'));
+          top = wt;
+        }
+        line.appendChild(clone);
+        prevRight = rects[i].left + rects[i].width;
+      });
+      if (!words.length) nameEl.textContent = site.name;
+      const ir = printImg.getBoundingClientRect();
+      const st = nameEl.style;
+      st.fontSize = parseFloat(getComputedStyle(title).fontSize) / s + 'px';
+      st.width = r.width / s + 'px';
+      st.left = (r.left - (W - w * s) / 2) / s - (ir.left - pr.left) + 'px';
+      st.top = (ty - (H - h * s) / 2) / s - (ir.top - pr.top) + 'px';
+      st.bottom = 'auto';
+      st.maxWidth = 'none';
+      // Glyph advances round at small sizes: each word is stretched to its exact share, the next on
+      // its line moved by the difference (layout does not see transforms).
+      const clones = $$('.hero__word', nameEl);
+      const natural = clones.map((clone) => parseFloat(getComputedStyle(clone).width) || 0);
+      let carry = 0;
+      clones.forEach((clone, i) => {
+        const target = rects[i].width / s;
+        if (!clone.style.marginLeft) carry = 0;
+        else if (carry) clone.style.marginLeft = parseFloat(clone.style.marginLeft) + carry + 'px';
+        if (natural[i] && Math.abs(natural[i] - target) > 0.02) {
+          clone.style.transformOrigin = '0 50%';
+          clone.style.transform = 'scaleX(' + target / natural[i] + ')';
+          carry += target - natural[i];
+        }
+      });
+    };
+
+    gsap.set(camBox, { xPercent: 70, rotationY: 35, scale: 0.7, opacity: 0, transformPerspective: 1000 });
+    gsap.set(focus, { xPercent: -50, yPercent: -50 });
+    gsap.set(print, { xPercent: -50, yPercent: -50, transformPerspective: 1200 }); // flat for the flash's frame
+    gsap.set(curtains[0], { yPercent: -100 });
+    gsap.set(curtains[1], { yPercent: 100 });
+    if (!lite) gsap.set(printImg, { filter: 'contrast(0.3) brightness(2.2) saturate(0)' });
+
+    tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    // 1. Power on: the sensor read-out line, the HUD ticks, the PWR lamp (one change).
+    tl.fromTo(scan, { opacity: 1, y: 0 }, { y: () => window.innerHeight, duration: T.cam, ease: 'power1.inOut' }, 0)
+      .to(scan, { opacity: 0, duration: 0.1 }, T.cam - 0.1)
+      .to(hud, { opacity: 1, duration: 0.3 }, 0.08)
+      .to(pwr, { opacity: 1, duration: 0.1, onStart: () => { pwr.classList.add('is-on'); } }, T.cam - 0.08);
+    // 2. The camera arrives from the right, drawing itself; the lens rings counter-rotate.
+    tl.to(camBox, { xPercent: 0, rotationY: 0, scale: 1, opacity: 1, duration: lite ? 0.75 : 1, ease: 'back.out(1.3)', onStart: () => { camBox.classList.add('is-moving'); }, onComplete: () => { camBox.classList.remove('is-moving'); } }, T.cam);
+    if (draw) tl.from(cam.strokes, { drawSVG: '0%', duration: lite ? 0.5 : 0.65, stagger: lite ? 0.015 : 0.022, ease: 'power2.inOut' }, T.cam + 0.05);
+    else tl.from(cam.strokes, { opacity: 0, duration: 0.5, stagger: 0.015 }, T.cam + 0.05);
+    tl.to(cam.fills, { attr: { 'fill-opacity': 1 }, duration: 0.5, ease: 'power2.out' }, T.cam + 0.4)
+      .to(cam.rings, { opacity: 1, duration: 0.4 }, T.cam + 0.45)
+      .to(cam.rings[0], { attr: { transform: 'rotate(15 ' + origin + ')' }, duration: lite ? 1 : 1.5, ease: 'power2.inOut' }, T.cam + 0.4)
+      .to(cam.rings[1], { attr: { transform: 'rotate(-20 ' + origin + ')' }, duration: lite ? 1 : 1.5, ease: 'power2.inOut' }, T.cam + 0.4);
+    if (!lite) tl.to(cam.spec, { attr: { x: 80 }, duration: 0.7, ease: 'power2.inOut' }, T.cam + 0.6);
+    // 3. Autofocus: the brackets hunt and lock, the read-outs roll, the blades open, REC breathes.
+    tl.fromTo(focus, { scale: 1.3, opacity: 0 }, { scale: 0.9, opacity: 1, duration: 0.3, ease: 'power2.out', immediateRender: false }, T.af)
+      .to(focus, { scale: 1, duration: 0.25, ease: 'back.out(2)', onComplete: () => { focus.classList.add('is-locked'); } }, T.af + 0.32)
+      .to(meter, { opacity: 1, duration: 0.2 }, T.af)
+      .to(rolls, { yPercent: -66.667, duration: lite ? 0.35 : 0.5, stagger: 0.1, ease: 'power3.inOut' }, T.af + 0.1)
+      .to(cam.rec, { opacity: 0.4, duration: 0.7, yoyo: true, repeat: 1, ease: 'sine.inOut' }, T.af);
+    cam.blades.forEach((blade, i) => { tl.to(blade, { attr: { transform: 'rotate(45 ' + cam.pivots[i] + ')' }, duration: 0.5, ease: 'power2.inOut' }, T.af + 0.15); });
+    // 4. The shutter (two curtains, 90 ms), then the ONE flash: it peaks at 0.85 and shrinks onto the
+    // print, already there underneath, overexposed, so the light never comes back up. The camera
+    // swells and fades: it passes behind the viewer.
+    tl.to(curtains, { yPercent: 0, duration: 0.045, ease: 'power3.in' }, T.shut)
+      .to(curtains[0], { yPercent: -100, duration: 0.045, ease: 'power2.out' }, T.shut + 0.05)
+      .to(curtains[1], { yPercent: 100, duration: 0.045, ease: 'power2.out' }, T.shut + 0.05)
+      .to(camBox, { scale: 0.97, duration: 0.05, yoyo: true, repeat: 1, ease: 'power1.inOut' }, T.shut)
+      .call(layoutMiniature, null, T.flash)
+      .set(print, { opacity: 1 }, T.flash + 0.02)
+      .fromTo(flash, { opacity: 0, clipPath: 'inset(0px 0px 0px 0px)' }, { opacity: 0.85, duration: 0.03, ease: 'power1.out', immediateRender: false }, T.flash)
+      .to(flash, { clipPath: frame, opacity: 0, duration: 0.14, ease: 'power2.out' }, T.flash + 0.03)
+      .to(camBox, { scale: 1.7, duration: 0.4, ease: 'power2.out', onStart: () => { camBox.classList.add('is-moving'); } }, T.flash)
+      .to(camBox, { opacity: 0, duration: 0.4, ease: 'power1.in', onComplete: () => { camBox.classList.remove('is-moving'); } }, T.flash)
+      .to(print, { yPercent: -52, rotation: -2.5, rotationX: 12, duration: 0.5, ease: 'back.out(1.8)' }, T.flash + 0.12); // kicked back a little, settles tilted
+    // 5. The print develops (a filter ramp on the full tier, a plain crossfade on lite); the stamp appears.
+    if (lite) tl.to(white, { opacity: 0, duration: 0.35, ease: 'power2.inOut' }, T.dev);
+    else tl.to(printImg, { filter: 'contrast(1) brightness(1) saturate(1)', duration: 0.6, ease: 'power2.inOut' }, T.dev).set(printImg, { clearProps: 'filter' }, T.dev + 0.6);
+    tl.to(stampEl, { opacity: 1, duration: 0.2 }, T.dev + (lite ? 0.3 : 0.5));
+    // 6. The print becomes the page: the entrance starts under the opaque overlay, the print grows to
+    // land its name on the h1 while picture, border and overlay dissolve, then the name is handed over.
+    tl.call(() => { reveal({ landAt: T.land - T.reveal }); }, null, T.reveal)
+      .call(() => { if (mini.w !== window.innerWidth || mini.h !== window.innerHeight) layoutMiniature(); }, null, T.grow)
+      .to(print, { scale: () => mini.scale, yPercent: -50, rotationX: 0, rotation: 0, duration: T.growDur, ease: 'power3.inOut', onStart: () => { print.classList.add('is-moving'); } }, T.grow)
+      .to([hud, focus, hint], { opacity: 0, duration: 0.25 }, T.grow)
+      .set(overlay, { pointerEvents: 'none' }, T.grow + 0.1)
+      // The cream border (under the picture) goes first, then the picture, bars and overlay ground
+      // together: nothing bright is ever left beneath a fading layer, so the light only ever falls.
+      .to(print, { backgroundColor: 'rgba(242, 237, 228, 0)', duration: T.dissolve * 0.55, ease: 'power1.inOut' }, T.land - T.dissolve)
+      .to(shadow, { opacity: 0, duration: T.dissolve * 0.55 }, T.land - T.dissolve)
+      .to(picture.concat(bars), { opacity: 0, duration: T.dissolve * 0.55, ease: 'power1.inOut' }, T.land - T.dissolve * 0.55)
+      .to(overlay, { backgroundColor: clear(getComputedStyle(overlay).backgroundColor), duration: T.dissolve * 0.55, ease: 'power1.inOut' }, T.land - T.dissolve * 0.55)
+      .call(handoff, null, T.land)
+      .call(finish, null, T.end);
+    return true;
+    });
+    if (!built) finish();
+  };
+  window.requestAnimationFrame(() => { setTimeout(build, 0); });
+}
+
+/** The 3-2-1 film leader (content.js: intro: "countdown"). done() runs when the page is revealed. */
+function runCountdown(done) {
   const gsap = window.gsap;
   const num = el('div', { class: 'intro__num', text: '3' });
-  const sweep = el('div', { class: 'intro__sweep' });
-  const stage = el('div', { class: 'intro__stage' }, [sweep, el('div', { class: 'intro__ring' }), el('div', { class: 'intro__cross' }), num]);
-  const left = el('div', { class: 'intro__shutter intro__shutter--l' });
-  const right = el('div', { class: 'intro__shutter intro__shutter--r' });
+  const sweep = dv('intro__sweep');
+  const stage = dv('intro__stage', [sweep, dv('intro__ring'), dv('intro__cross'), num]);
+  const left = dv('intro__shutter intro__shutter--l');
+  const right = dv('intro__shutter intro__shutter--r');
   const hint = el('p', { class: 'intro__hint', text: 'Click or press any key to skip' });
-  const overlay = el('div', { class: 'intro', 'aria-hidden': 'true' }, [left, right, stage, hint]);
+  const overlay = hid(dv('intro', [left, right, stage, hint]));
   document.body.appendChild(overlay);
 
   let finished = false;
@@ -413,7 +751,8 @@ function runIntro(site, done) {
   tl.to(left, { xPercent: -100, duration: 0.45, ease: 'power3.inOut' }, 'wipe');
   tl.to(right, { xPercent: 100, duration: 0.45, ease: 'power3.inOut' }, 'wipe');
 
-  function skip() {
+  function skip(e) {
+    swallowScrollKey(e);
     if (!finished && tl.time() < tl.labels.wipe) tl.seek('wipe');
   }
   function finish() {
@@ -421,7 +760,7 @@ function runIntro(site, done) {
     finished = true;
     document.removeEventListener('keydown', skip);
     overlay.remove();
-    done();
+    done({ fromIntro: true });
   }
   document.addEventListener('keydown', skip);
   overlay.addEventListener('pointerdown', skip);
@@ -553,7 +892,7 @@ function heroBackground(hero, site) {
     if (heroCtl) heroCtl[run ? 'resume' : 'pause']();
   }
   function cssLeak() {
-    const leak = el('div', { class: 'hero__leak', 'aria-hidden': 'true' }, [el('span'), el('span')]);
+    const leak = hid(dv('hero__leak', [el('span'), el('span')]));
     hero.insertBefore(leak, shade);
     later(() => { leak.remove(); });
   }
@@ -593,6 +932,78 @@ function heroBackground(hero, site) {
   later(() => { heroCtl = null; hero.classList.remove('is-offscreen'); });
 }
 
+/** The name tilts toward the pointer (max 6 deg) and a light sweeps it every 12 s while on screen. */
+function heroTitleFx(hero, title, sweep) {
+  if (tier !== 'full' || !fineMQ.matches || !title) return null;
+  const gsap = window.gsap;
+  const rx = gsap.quickTo(title, 'rotationX', { duration: 0.6, ease: 'power2' });
+  const ry = gsap.quickTo(title, 'rotationY', { duration: 0.6, ease: 'power2' });
+  gsap.set(title, { transformPerspective: 900 });
+  let armed = false;
+  let timer = 0;
+  on(hero, 'pointermove', (e) => {
+    if (!armed || (e.pointerType && e.pointerType !== 'mouse')) return;
+    const r = hero.getBoundingClientRect();
+    const nx = (e.clientX - r.left) / Math.max(1, r.width);
+    const ny = (e.clientY - r.top) / Math.max(1, r.height);
+    rx((0.5 - ny) * 12);
+    ry((nx - 0.5) * 12);
+    title.classList.add('is-tilting');
+    clearTimeout(timer);
+    timer = setTimeout(() => { title.classList.remove('is-tilting'); }, 700);
+  }, { passive: true });
+  on(hero, 'pointerleave', () => { rx(0); ry(0); });
+  later(() => {
+    clearTimeout(timer);
+    title.classList.remove('is-tilting');
+  });
+  if (sweep) {
+    // A 12 s timer, paused off screen; each lap inserts a sheen copy for its 1.2 s sweep (the guard:
+    // stop()'s revert replays onRepeat).
+    const loop = gsap.to({}, { duration: 12, repeat: -1, paused: true, onRepeat: () => { active && sweep(1.2); } });
+    later(whenVisible(hero, (visible) => { loop.paused(!visible); }));
+  }
+  return function arm() { armed = true; };
+}
+
+/** The entrance: letters slam in from depth, an RGB split, a light sweep; the role line stamps in;
+    tagline, chips, buttons follow; quick: about 300 ms. With p.land the camera intro brings the
+    name itself and lands the letters at p.landAt; the rest follows that. */
+function heroEntrance(p, quick) {
+  const gsap = window.gsap;
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  const at = p.land ? p.landAt : 1.05; // when the name is in place
+  tl.to(p.panels, { scaleY: p.barScale, duration: 1.1, ease: 'power3.inOut', onComplete: () => { p.panels.forEach((n) => { n.hidden = true; }); } }, 0);
+  if (p.vf) tl.to(p.vf, { opacity: 1, duration: 1 }, 0.3);
+  if (p.content) {
+    if (p.land) tl.set(p.content, { opacity: 1, y: 0 }, 0); // its parts have their own entrances
+    else tl.to(p.content, { opacity: 1, y: 0, duration: 0.5 }, 0.3);
+  }
+  // The stamp: a two-step flicker inside 150 ms, once, in the accent red; then it holds in amber.
+  if (p.role) {
+    const r = p.land ? at - 0.18 : 0.4; // after the intro: once the overlay has mostly dissolved
+    tl.to(p.role, { opacity: 1, duration: 0.05 }, r).to(p.role, { opacity: 0.35, duration: 0.05 }, r + 0.06).to(p.role, { opacity: 1, duration: 0.06 }, r + 0.12);
+    if (p.stamp) tl.to(p.role, { color: p.stamp, duration: 0.5, ease: 'power2.inOut' }, r + 0.3);
+  }
+  if (p.letters.length) {
+    if (p.land) tl.call(p.land, null, at + 0.3); // a fallback: the intro's own hand-off comes first
+    else {
+      tl.to(p.letters, { scale: 1, rotationX: 0, opacity: 1, duration: 0.6, stagger: 0.04, ease: 'back.out(1.6)' }, 0.45);
+      const landed = 0.45 + 0.6 + 0.04 * (p.letters.length - 1);
+      // immediateRender false: a fromTo would otherwise show its start state as soon as the timeline is built.
+      if (p.rgb.length) tl.fromTo(p.rgb, { opacity: 0.8, x: (i) => (i ? 5 : -5) }, { opacity: 0, x: 0, duration: 0.2, ease: 'power2.out', immediateRender: false, onComplete: p.dropRgb }, landed - 0.25);
+      tl.call(() => { p.sweep(quick ? 0.25 : 0.7); }, null, landed - 0.1);
+    }
+  }
+  if (p.tagline) tl.to(p.tagline, { opacity: 1, y: 0, duration: 0.6 }, at - 0.15);
+  if (p.chips.length) tl.to(p.chips, { opacity: 1, scale: 1, duration: 0.45, stagger: 0.08, ease: 'back.out(2.5)' }, at);
+  if (p.buttons.length) tl.to(p.buttons, { opacity: 1, x: 0, duration: 0.5, stagger: 0.08 }, at + 0.1);
+  if (p.sheens.length) tl.fromTo(p.sheens, { xPercent: -130 }, { xPercent: 330, duration: 0.55, stagger: 0.08, ease: 'power2.inOut', immediateRender: false }, at + 0.3);
+  if (p.bar) tl.from(p.bar, { yPercent: 100, duration: 0.6 }, 0.5);
+  if (quick) tl.timeScale(Math.max(1, tl.duration() / 0.3));
+  return tl;
+}
+
 function initHero(site) {
   const gsap = window.gsap;
   const hero = $('#hero');
@@ -600,46 +1011,111 @@ function initHero(site) {
   const title = $('#hero-title');
   const content = $('.hero__content', hero);
   const vf = $('.hero__vf', hero);
+  const role = $('.hero__role', hero);
+  const tagline = $('#hero-tagline');
+  const chips = $$('#hero-chips .chip');
+  const buttons = $$('.hero__actions .btn').filter((b) => !b.hidden);
 
   // Letterbox panels that open to the bar height.
   const barPx = parseFloat(getComputedStyle(hero, '::before').height) || 16;
-  const panels = [el('div', { class: 'lb lb--top', 'aria-hidden': 'true' }), el('div', { class: 'lb lb--bottom', 'aria-hidden': 'true' })];
+  const panels = [hid(dv('lb lb--top')), hid(dv('lb lb--bottom'))];
   panels.forEach((p) => { hero.appendChild(p); });
   later(() => { panels.forEach((p) => { p.remove(); }); });
 
   const letters = splitTitle(title, site.name);
-  const hiddenParts = [content, vf].filter(Boolean).concat(letters);
+  // Copies of the split words for the RGB split and each sweep, removed after their moment (the h1
+  // holds the name once); the leading space keeps main.js's fit reading whole words.
+  const words = $$('.hero__word', title);
+  const copy = (cls) => {
+    const node = hid(sp(cls, ' '));
+    words.forEach((w, i) => {
+      if (i) node.appendChild(document.createTextNode(' '));
+      node.appendChild(w.cloneNode(true));
+    });
+    return title.appendChild(node);
+  };
+  const rgb = letters.length ? [copy('hero__rgb hero__rgb--0'), copy('hero__rgb hero__rgb--1')] : [];
+  const dropRgb = () => { rgb.splice(0).forEach((n) => { n.remove(); }); };
+  const sweep = (duration) => {
+    const node = copy('hero__sheen');
+    track(() => { gsap.fromTo(node, { backgroundPositionX: '100%' }, { backgroundPositionX: '0%', duration: duration, ease: 'power2.inOut', onComplete: () => { node.remove(); } }); });
+  };
+  const sheens = buttons.map((b) => b.appendChild(hid(sp('btn__sheen'))));
+  later(() => { sheens.forEach((n) => { n.remove(); }); });
 
   // Start states, set in the same task as the motion-on class, so nothing flashes.
-  if (content) gsap.set(content, { opacity: 0, y: 28 });
+  if (content) gsap.set(content, { opacity: 0, y: 20 });
   if (vf) gsap.set(vf, { opacity: 0 });
-  if (letters.length) gsap.set(letters, { yPercent: 70, opacity: 0, rotateX: -60, transformPerspective: 600 });
+  if (letters.length) gsap.set(letters, { scale: 2.4, rotationX: -60, opacity: 0, transformOrigin: '50% 50%', transformPerspective: 600 });
+  const stamp = text(getComputedStyle(root).getPropertyValue('--m-stamp'));
+  if (role) gsap.set(role, { opacity: 0, color: text(getComputedStyle(root).getPropertyValue('--c-rec')) || '#ff453a' });
+  if (tagline && !tagline.hidden) gsap.set(tagline, { opacity: 0, y: 24 });
+  if (chips.length) gsap.set(chips, { opacity: 0, scale: 0.6 });
+  if (buttons.length) gsap.set(buttons, { opacity: 0, x: -24 });
+  const hiddenParts = [content, vf, role, tagline].filter(Boolean).concat(letters, chips, buttons);
 
-  // Whatever fails from here on, the hero is shown.
-  const show = () => {
-    gsap.set(hiddenParts, { clearProps: 'all' });
-    panels.forEach((p) => { p.hidden = true; });
-  };
   safely('hero background', () => { heroBackground(hero, site); });
   const arm = safely('hero parallax', () => pointerParallax(hero, vf, content));
+  const armTilt = safely('hero title', () => heroTitleFx(hero, title, letters.length ? sweep : null));
+  const armAll = () => {
+    if (arm) arm();
+    if (armTilt) armTilt();
+  };
 
-  const play = () => { // runs after the countdown, outside safely('hero')
+  // Whatever fails from here on, the hero is shown; show() needs no GSAP tick.
+  let entrance = null;
+  let landed = false;
+  const show = () => {
+    landed = true;
+    if (entrance) {
+      entrance.progress(1).kill();
+      entrance = null;
+    }
+    gsap.set(hiddenParts, { clearProps: 'all', immediateRender: true }); // renders now, even with GSAP paused
+    dropRgb();
+    panels.forEach((p) => { p.hidden = true; });
+    armAll();
+  };
+  // The camera intro's hand-off: the letters appear in place, then the RGB split and sweep.
+  const land = () => {
+    if (landed) return;
+    landed = true;
+    track(() => {
+      gsap.set(letters, { scale: 1, rotationX: 0, opacity: 1 });
+      if (rgb.length) gsap.fromTo(rgb, { opacity: 0.8, x: (i) => (i ? 5 : -5) }, { opacity: 0, x: 0, duration: 0.2, ease: 'power2.out', onComplete: dropRgb });
+      if (letters.length) sweep(0.7);
+    });
+  };
+  const noop = () => {};
+
+  const play = (opts) => { // runs after the intro (or at once), outside safely('hero')
+    const o = opts || {};
+    const ctl = { land: noop, hurry: noop, show: show };
+    if (o.force) {
+      show();
+      return ctl;
+    }
+    const handing = !!(o.fromIntro && !o.quick && o.landAt > 0 && letters.length);
     const ok = safely('hero entrance', () => {
       track(() => {
-        const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-        tl.to(panels, {
-          scaleY: Math.min(1, barPx / Math.max(1, hero.clientHeight / 2)),
-          duration: 1.1,
-          ease: 'power3.inOut',
-          onComplete: () => { panels.forEach((p) => { p.hidden = true; }); }
-        }, 0);
-        if (vf) tl.to(vf, { opacity: 1, duration: 1 }, 0.3);
-        if (content) tl.to(content, { opacity: 1, y: 0, duration: 0.9, onComplete: () => { if (arm) arm(); } }, 0.35);
-        if (letters.length) tl.to(letters, { yPercent: 0, opacity: 1, rotateX: 0, duration: 0.7, stagger: 0.035 }, 0.45);
+        const bar = o.fromIntro ? $('.tl') : null;
+        entrance = heroEntrance({
+          panels: panels, barScale: Math.min(1, barPx / Math.max(1, hero.clientHeight / 2)), vf: vf, content: content, role: role,
+          letters: letters, rgb: rgb, dropRgb: dropRgb, sweep: sweep, land: handing ? land : null, landAt: o.landAt,
+          tagline: tagline && !tagline.hidden ? tagline : null, chips: chips, buttons: buttons, sheens: sheens, stamp: stamp,
+          bar: bar && getComputedStyle(bar).display !== 'none' ? bar : null
+        }, !!o.quick);
+        entrance.eventCallback('onComplete', () => {
+          entrance = null;
+          armAll();
+        });
       });
       return true;
     });
     if (!ok) show();
+    if (handing) ctl.land = land;
+    ctl.hurry = () => { if (entrance) entrance.timeScale(Math.max(1, (entrance.duration() - entrance.time()) / 0.3)); };
+    return ctl;
   };
   try {
     runIntro(site, play);
@@ -662,9 +1138,9 @@ function initTimeline() {
   }).filter(Boolean);
   if (!items.length) return;
 
-  const progress = el('div', { class: 'tl__progress', 'aria-hidden': 'true' });
+  const progress = hid(dv('tl__progress'));
   const labelText = el('span', { class: 'tl__label-text', text: '00 / TOP' });
-  const head = el('span', { class: 'tl__head', 'aria-hidden': 'true' });
+  const head = hid(sp('tl__head'));
   const buttons = items.map((item, i) => {
     const button = el('button', { type: 'button', class: 'tl__clip' }, [
       el('span', { class: 'tl__num', 'aria-hidden': 'true', text: pad(i + 1) }),
@@ -674,8 +1150,8 @@ function initTimeline() {
     return button;
   });
   const bar = el('nav', { class: 'tl', 'aria-label': 'Timeline' }, [
-    el('span', { class: 'tl__label', 'aria-hidden': 'true' }, [el('span', { class: 'rec__dot' }), labelText]),
-    el('div', { class: 'tl__track' }, buttons.concat([head]))
+    hid(sp('tl__label', [sp('rec__dot'), labelText])),
+    dv('tl__track', buttons.concat([head]))
   ]);
   document.body.appendChild(progress);
   document.body.appendChild(bar);
@@ -747,8 +1223,8 @@ function initTimeline() {
 
 function initCursor() {
   if (tier !== 'full' || !fineMQ.matches) return;
-  const textEl = el('span', { class: 'cur__text' });
-  const cur = el('div', { class: 'cur', 'aria-hidden': 'true' }, [el('span', { class: 'cur__ring' }), el('span', { class: 'cur__dot' }), textEl]);
+  const textEl = sp('cur__text');
+  const cur = hid(dv('cur', [sp('cur__ring'), sp('cur__dot'), textEl]));
   document.body.appendChild(cur);
   root.classList.add('has-cursor');
   later(() => {
@@ -919,7 +1395,7 @@ function initShutter() {
   };
   const iris = (at, from, to, done) => {
     clear();
-    overlay = document.body.appendChild(el('div', { class: 'shutter', 'aria-hidden': 'true' }));
+    overlay = document.body.appendChild(hid(dv('shutter')));
     const shape = (r) => 'circle(' + r + ' at ' + at[0].toFixed(0) + 'px ' + at[1].toFixed(0) + 'px)';
     gsap.fromTo(overlay, { clipPath: shape(from) }, { clipPath: shape(to), duration: 0.35, ease: 'power2.inOut', onComplete: done });
   };
@@ -1044,12 +1520,12 @@ function stripMode(grid) {
     target.addEventListener(type, fn, opts);
     undo.push(() => { target.removeEventListener(type, fn, opts); });
   };
-  const viewport = el('div', { class: 'strip__viewport' });
-  const counter = el('span', { class: 'strip__counter', 'aria-hidden': 'true' });
+  const viewport = dv('strip__viewport');
+  const counter = hid(sp('strip__counter'));
   const reel = el('div', { class: 'strip__reel', 'data-cursor': 'drag' }, [viewport, counter]);
-  const wrap = el('div', { class: 'strip' });
+  const wrap = dv('strip');
   const end = el('li', { class: 'strip__end' }, [
-    el('span', { class: 'strip__end-label', 'aria-hidden': 'true' }, [el('span', { class: 'rec__dot' }), 'End of reel']),
+    hid(sp('strip__end-label', [sp('rec__dot'), 'End of reel'])),
     el('a', { class: 'btn btn--primary', href: '#contact', text: 'Get in touch' })
   ]);
   const moved = [$('#work-filters'), $('#work-status'), grid].filter(Boolean); // into the pinned wrapper, back on undo
@@ -1175,7 +1651,7 @@ function initWork() {
   const grid = $('#work-grid');
   const panel = $('.empty__panel');
   if (panel) { // standby monitor: a scan line and a breathing REC dot while on screen
-    const scan = panel.appendChild(el('span', { class: 'empty__scan', 'aria-hidden': 'true' }));
+    const scan = panel.appendChild(hid(sp('empty__scan')));
     later(whenVisible(panel, (visible) => { panel.classList.toggle('is-live', visible); }));
     later(() => {
       panel.classList.remove('is-live');
@@ -1226,7 +1702,7 @@ function initGrade() {
     warn('grade: "before" and "after" must both be picture paths inside the site (e.g. "assets/img/before.jpg") and the Services section shown; the slider is hidden.');
     return;
   }
-  const stage = el('div', { class: 'grade__stage' });
+  const stage = dv('grade__stage');
   const range = el('input', { class: 'grade__range', type: 'range', min: '0', max: '100', step: '1', value: '50' });
   const box = el('div', { class: 'grade', role: 'group', 'aria-label': 'Before and after colour grading' }, [
     stage,
@@ -1246,7 +1722,7 @@ function initGrade() {
     img.src = src;
     return stage.appendChild(img);
   });
-  stage.appendChild(el('span', { class: 'grade__divider', 'aria-hidden': 'true' }));
+  stage.appendChild(hid(sp('grade__divider')));
   stage.appendChild(el('span', { class: 'grade__tag grade__tag--before', 'aria-hidden': 'true', text: 'Before' }));
   stage.appendChild(el('span', { class: 'grade__tag grade__tag--after', 'aria-hidden': 'true', text: 'After' }));
 
@@ -1331,9 +1807,9 @@ function initProcess() {
   const ruler = $('#process-ruler');
   const headEl = ruler && $('.timeline-ruler__head', ruler);
   if (!headEl) return;
-  const fill = el('span', { class: 'export__fill' });
+  const fill = sp('export__fill');
   const label = el('span', { class: 'export__label', text: 'Export 0%' });
-  const done = el('span', { class: 'export__done' }, [tickIcon(), 'Export complete']);
+  const done = sp('export__done', [tickIcon(), 'Export complete']);
   [fill, label, done].forEach((node) => { ruler.appendChild(node); });
   later(() => {
     [fill, label, done].forEach((node) => { node.remove(); });
@@ -1375,12 +1851,12 @@ function initAbout() {
   const titles = siteData().services.map((s) => text(s && s.title)).filter(Boolean);
   if (!titles.length) return;
   const row = () => {
-    return el('span', { class: 'marquee__row' }, titles.map((title) => { return el('span', { class: 'marquee__item' }, [title, el('span', { class: 'rec__dot' })]); }));
+    return sp('marquee__row', titles.map((title) => { return sp('marquee__item', [title, sp('rec__dot')]); }));
   };
   const rows = [row(), row()]; // twice over, so the loop has no seam
-  const band = el('div', { class: 'marquee' }, [
+  const band = dv('marquee', [
     el('ul', { class: 'sr-only', 'aria-label': 'Services' }, titles.map((title) => { return el('li', { text: title }); })),
-    el('div', { class: 'marquee__track', 'aria-hidden': 'true' }, rows)
+    hid(dv('marquee__track', rows))
   ]);
   section.parentNode.insertBefore(band, section.nextSibling);
   band.style.setProperty('--m-marquee-dur', Math.max(12, Math.round(rows[0].offsetWidth / 80)) + 's'); // about 80 px a second
@@ -1401,7 +1877,7 @@ function initContact() {
   const line = el('p', { class: 'contact__display' });
   words.forEach((word, i) => {
     if (i) line.appendChild(document.createTextNode(' '));
-    line.appendChild(el('span', { class: 'contact__mask' }, word));
+    line.appendChild(sp('contact__mask', word));
   });
   grid.insertBefore(line, grid.firstChild);
   later(() => { line.remove(); });
@@ -1412,9 +1888,9 @@ function initContact() {
     const d = event.detail || {};
     const button = (d.submitter && d.submitter.closest && d.submitter.closest('.btn')) || $('#form-actions .btn:not([hidden])');
     if (!button || button.classList.contains('is-exporting')) return;
-    const bar = el('span', { class: 'btn__bar' });
+    const bar = sp('btn__bar');
     const label = el('span', { class: 'btn__fx-text', text: 'Exporting…' });
-    const fx = el('span', { class: 'btn__fx', 'aria-hidden': 'true' }, [bar, label]);
+    const fx = hid(sp('btn__fx', [bar, label]));
     button.classList.add('is-exporting');
     button.appendChild(fx);
     gsap.timeline({ onComplete: () => { fx.remove(); button.classList.remove('is-exporting'); } })

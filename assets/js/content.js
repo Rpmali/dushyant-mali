@@ -28,17 +28,18 @@ window.SITE = {
   // ---------------------------------------------------------------
   // WEBSITE ADDRESS
   // ---------------------------------------------------------------
-  // The public address of this website, written down here for reference.
-  // The page itself does NOT read this line, so changing it alone changes
-  // nothing. If you buy your own domain (for example
-  // "https://www.yourname.com/"), update it here AND in the places that
-  // actually matter:
+  // The public address of this website (it is hosted on Vercel), written
+  // down here for reference. The page itself does NOT read this line, so
+  // changing it alone changes nothing. If you buy your own domain (for
+  // example "https://www.yourname.com/"), update it here AND in the places
+  // that actually matter:
   //   - index.html (the lines with "canonical", "og:url", "og:image",
   //     "twitter:image" and the "url" inside the Person block)
   //   - robots.txt
   //   - sitemap.xml
-  //   - 404.html (the <base href> line)
-  siteUrl: "https://rpmali.github.io/dushyant-mali/",
+  //   - 404.html (the <base href> line stays "/" while the site is served
+  //     from the root of a domain, as on Vercel)
+  siteUrl: "https://dushyant-mali.vercel.app/",
 
   // ---------------------------------------------------------------
   // ABOUT YOU
@@ -142,12 +143,18 @@ window.SITE = {
   // The page has an animated version (letterbox, timeline bar, smooth
   // scrolling and so on). Visitors can turn it off with the button at
   // the top right; it also stays off for anyone whose device asks for
-  // less motion. This setting only controls the intro:
-  //   intro: the short 3-2-1 film countdown shown once per visit when
-  //          the page opens (a click or any key skips it). Write false
-  //          to switch it off.
+  // less motion. This setting only controls the intro, the short scene
+  // shown once per visit when the page opens (a click, a tap or any key
+  // skips it):
+  //   intro: "camera"     a camera slides in, focuses on the visitor,
+  //                       fires one flash, and the photo it takes becomes
+  //                       the top of the page (about 4 seconds, shorter
+  //                       on phones). This is the default.
+  //   intro: "countdown"  the older 3-2-1 film-leader countdown instead.
+  //   intro: false        no intro at all: the page simply appears.
+  // Anything else is treated as "camera".
   motion: {
-    intro: true,
+    intro: "camera",
   },
 
   // ---------------------------------------------------------------

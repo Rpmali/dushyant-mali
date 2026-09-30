@@ -3,10 +3,10 @@
 This is the personal website of Dushyant Mali, freelance videographer, video editor and social
 media marketer. It shows your videos, the services you offer, how you work, a short About section
 and a contact form that opens WhatsApp or email with the visitor's message already written. It is a plain website (HTML,
-CSS and a little JavaScript): no installation, no build step, no monthly cost. GitHub Pages hosts
-it for free.
+CSS and a little JavaScript): no installation, no build step, no monthly cost. Vercel hosts it
+for free.
 
-Live address, once GitHub Pages is switched on: **https://rpmali.github.io/dushyant-mali/**
+Live address: **https://dushyant-mali.vercel.app/**
 
 ---
 
@@ -29,7 +29,7 @@ Any field left as `""` (empty) is simply hidden, so the page never shows an empt
 
 | Field | What it does | Example |
 |---|---|---|
-| `siteUrl` | The public address of the site, written down for reference. The page itself does not read this line; with a custom domain, the lines that matter are listed under "Custom domain" below. | `"https://rpmali.github.io/dushyant-mali/"` |
+| `siteUrl` | The public address of the site, written down for reference. The page itself does not read this line; with a custom domain, the lines that matter are listed under "Custom domain" below. | `"https://dushyant-mali.vercel.app/"` |
 | `name` | Your name, shown in the header, the big title, the footer and the browser tab. | `"Dushyant Mali"` |
 | `role` | What you do, shown above your name. | `"Videographer, Video Editor & Social Media Marketer"` |
 | `tagline` | One short line under your name. Rewrite it in your own words. | `"Video shooting, editing and social media marketing, from the first frame to the final post."` |
@@ -45,7 +45,7 @@ Any field left as `""` (empty) is simply hidden, so the page never shows an empt
 | `showreel.video` | A YouTube or Vimeo link. Adds a "Play showreel" button at the top of the page. | `"https://youtu.be/VIDEO_ID_HERE"` |
 | `showreel.poster` | Optional wide picture used as the background at the top of the page. | `"assets/img/poster.jpg"` |
 | `showreel.clips` | Optional short muted clips that play behind the top of the page in the animated version (see "Motion and the animation switch"). | `["assets/video/clip-1.mp4"]` |
-| `motion.intro` | `true` shows the short 3-2-1 countdown once per visit; `false` switches it off. | `true` |
+| `motion.intro` | The intro shown once per visit: `"camera"` (the default: a camera takes the visitor's picture and the photo becomes the page), `"countdown"` (the older 3-2-1 film leader) or `false` (no intro). | `"camera"` |
 | `grade.before`, `grade.after` | Optional pair of pictures of the **same size**: a raw frame and your graded version. When both are set, a before/after slider appears above the services. | `"assets/img/before.jpg"`, `"assets/img/after.jpg"` |
 | `services` | Your services. Each has a `title`, a `description` and a list of `points`. They are also the choices in the contact form. Delete any you do not offer. | see `content.js` |
 | `process` | The steps of working with you. Each has a `title` and a `text`. | see `content.js` |
@@ -154,7 +154,7 @@ link as a fallback.
 
 Tips:
 
-- Use simple lowercase file names without spaces, e.g. `profile.jpg`. GitHub Pages treats
+- Use simple lowercase file names without spaces, e.g. `profile.jpg`. The web server treats
   `Profile.JPG` and `profile.jpg` as different files.
 - A portrait (taller than wide) photo about 1000 to 1500 pixels tall, under 500 KB, loads fast
   and looks sharp.
@@ -165,24 +165,45 @@ Tips:
 
 ## Motion and the animation switch
 
-The page has an animated version that runs on top of the plain one: a short 3-2-1 film countdown
-on the first visit, letterbox bars that open over the top of the page, the name revealed letter by
-letter, an animated light-leak background, a small editing-timeline bar along the bottom of the
-screen on desktop (a thin red progress line on phones), smooth scrolling on desktop, and elements
-that reveal as you scroll.
+The page has an animated version that runs on top of the plain one: "The Shot", a short camera
+intro on the first visit, letterbox bars that open over the top of the page, the name slamming in
+letter by letter, an animated light-leak background, a small editing-timeline bar along the bottom
+of the screen on desktop (a thin red progress line on phones), smooth scrolling on desktop, and
+elements that reveal as you scroll.
 
 - **The switch.** The small pause/play button at the top right of the first screen turns the
   animation off and on. The choice is remembered on that device. When it is off, the page looks
-  and behaves exactly like the plain version, and the countdown never plays.
+  and behaves exactly like the plain version, and the intro never plays.
 - **Reduced motion.** Visitors whose phone or computer asks for less motion ("Reduce motion" in
   their settings) always get the plain version. Nothing on the page depends on the animation.
 - **Phones, tablets and lower-powered computers** get a lighter version automatically: no WebGL
   background (a soft CSS light leak instead), no custom cursor, no film strip. A laptop counts as
   lower-powered when it reports 4 processor cores or fewer, 4 GB of memory or less, or has data
   saver switched on; it keeps smooth scrolling, phones and tablets keep native scrolling.
-- **The countdown** plays once per visit (per browser tab session) and is skipped with a click, a
-  tap or any key. To switch it off for everyone, set `intro: false` under `motion` in
-  `content.js`. It never plays while the notes box for the owner is showing.
+- **The intro, "The Shot"** plays once per visit (per browser tab session) and is skipped at any
+  moment with a click, a tap or any key (a small "Click or press any key to skip" line says so).
+  A line sweeps down the black screen like a sensor reading out, a drawn camera slides in from
+  the right and focuses on the visitor (focus brackets hunt and lock, ISO, aperture and shutter
+  read-outs roll to generic values, the aperture blades open), the shutter snaps, the flash
+  fires once, and the photo it took, a white-bordered print with a miniature of the top of the
+  page inside it, develops from overexposed white and then grows until its name sits exactly
+  where the page's name stands, the picture dissolving into the live page on the way; the page
+  takes the name over in the same frame, so there is no jump. It lasts about
+  4 seconds on a desktop and about 2.5 seconds in the lighter version (no filters, shorter
+  cuts). If anything in it fails, the page appears anyway (a 6-second guard removes it no matter
+  what). The 3-2-1 countdown from before is still available: set `intro: "countdown"` under
+  `motion` in `content.js`; `intro: false` switches intros off for everyone. It never plays
+  while the notes box for the owner is showing, with the animation switched off, or for
+  visitors who asked for less motion. The date in the corner of the print is the visitor's
+  current date; the exposure read-outs are decoration, not a record of any real shot.
+- **The name** is set in **Unbounded** (a wide, heavy typeface), the rest of the page in Oswald
+  and Inter as before. In the animated version the name arrives with the intro's print (or, when
+  the intro is skipped or has already played, each letter slams in from depth), then a brief
+  red/cream split and a light sweep cross the letters; the role line above it stamps in like a
+  camera date-stamp (a short red flicker, then amber); the tagline, location tag and buttons
+  follow. On a desktop the name tilts slightly toward the mouse and the light sweeps it again
+  about every 12 seconds while it is on screen. With the switch off or reduced motion on, the
+  name simply appears in the new typeface.
 
 What each section does in the animated version:
 
@@ -252,12 +273,17 @@ plays the first one it can. A clip that cannot be found or played is skipped and
 carry on; only when none of them can play does the light leak come back. Either way a note is
 written to the browser console.
 
-### Libraries
+### Libraries and fonts
 
 The animation uses three small libraries, copied into `assets/vendor/` so nothing is ever loaded
-from another server: **GSAP 3.15** with its ScrollTrigger plugin (GreenSock's "Standard" licence,
-no charge, free for commercial use, https://gsap.com/standard-license) and **Lenis 1.3** (MIT
-licence). The licence texts are in `assets/vendor/LICENSES.md`.
+from another server: **GSAP 3.15** with its ScrollTrigger and DrawSVG plugins (GreenSock's
+"Standard" licence, no charge, free for commercial use, https://gsap.com/standard-license) and
+**Lenis 1.3** (MIT licence). The licence texts are in `assets/vendor/LICENSES.md`.
+
+The three typefaces (**Inter** for text, **Oswald** for titles, **Unbounded** for the name) are
+self-hosted in `assets/fonts/` (latin subsets, only the weights used), so nothing is fetched
+from Google Fonts either and the site renders its real fonts offline. All three are under the
+SIL Open Font License; the licence texts are in `assets/fonts/LICENSES.md`.
 
 ---
 
@@ -265,18 +291,23 @@ licence). The licence texts are in `assets/vendor/LICENSES.md`.
 
 **Quick look:** download the repository (on GitHub: **Code** > **Download ZIP**), unzip it and
 double-click `index.html`. Everything is shown, but videos may refuse to play when the page is
-opened as a file, because YouTube and Vimeo expect a real web address.
+opened as a file, because YouTube and Vimeo expect a real web address. Opened as a file, the
+browser's developer console (which visitors never see) also lists three warnings about the font
+preloads in `index.html`; the fonts still load and the page renders normally, and the warnings
+do not occur on a web address, so the `crossorigin` attribute stays.
 
-**Full preview (videos and the 404 page too):** open a terminal in the folder that **contains**
-the `dushyant-mali` folder and run:
+**Full preview (videos and the 404 page too):** open a terminal **inside** the `dushyant-mali`
+folder and run:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Then open **http://localhost:8000/dushyant-mali/** in your browser. (The `/dushyant-mali/` part
-matters: it copies how GitHub Pages serves the site.) To see the "page not found" page, open
-http://localhost:8000/dushyant-mali/404.html . Press `Ctrl + C` in the terminal to stop.
+Then open **http://localhost:8000/** in your browser (the site at the root of an address, the
+way Vercel serves it). To see the "page not found" page, open http://localhost:8000/404.html .
+Press `Ctrl + C` in the terminal to stop. (The main page also works from a sub-folder such as
+http://localhost:8000/dushyant-mali/ when the server runs one level up, because all its links
+are relative; only the 404 page expects the root, see `404.html`.)
 
 While previewing on your own computer, if something in `content.js` cannot be used (a mistyped
 video link, an email without `@`, a missing comma), a small **notes box** appears at the bottom
@@ -284,31 +315,36 @@ of the page explaining what to fix. It is never shown on the live site.
 
 ---
 
-## Publish with GitHub Pages
+## Publish with Vercel
 
-1. On GitHub, open the repository and click **Settings**.
-2. In the left menu, click **Pages**.
-3. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
-4. Set **Branch** to **main** and the folder to **/ (root)**, then click **Save**.
-5. Wait a minute or two and refresh the page. The address appears at the top:
-   **https://rpmali.github.io/dushyant-mali/**
+The site is live at **https://dushyant-mali.vercel.app/**. It was set up like this, and the same
+steps work again for a new copy:
 
-After that, every change you commit is published automatically within a minute or two.
+1. Sign in at https://vercel.com with the GitHub account that owns the repository.
+2. Click **Add New...** > **Project** and **Import** the `dushyant-mali` repository.
+3. Leave **Framework Preset** as **Other**, leave **Build Command** empty (there is nothing to
+   build) and set **Output Directory** to `.` (the files are served as they are).
+4. Click **Deploy**. Vercel gives the site its address.
+
+After that, every push to the `main` branch (every commit made on GitHub) is published
+automatically within a minute or so. Vercel shows `404.html` for any address that does not
+exist, which is why that file starts its links from the root (`<base href="/">`).
 
 To get the site into Google, add it to **Google Search Console** (https://search.google.com/search-console):
-choose the **URL prefix** option, enter `https://rpmali.github.io/dushyant-mali/`, and verify with the
+choose the **URL prefix** option, enter `https://dushyant-mali.vercel.app/`, and verify with the
 **HTML tag** method by pasting the `<meta name="google-site-verification" ...>` line it gives you
 into the `<head>` of `index.html` (just below the `<meta name="author" ...>` line). Then, under
-**Sitemaps**, submit `https://rpmali.github.io/dushyant-mali/sitemap.xml`. This step is needed
-because on a `github.io` address the `robots.txt` in this folder is never read by search engines
-(they only look at the top of `rpmali.github.io`).
+**Sitemaps**, submit `https://dushyant-mali.vercel.app/sitemap.xml` (the `robots.txt` in this
+folder already points there).
 
-Notes:
+### GitHub Pages instead (alternative)
 
-- On a free GitHub account, the repository must be **public** for GitHub Pages to work.
-- The address above assumes the GitHub account is `rpmali` and the repository is named
-  `dushyant-mali`. If either changes, update the address in the places listed under
-  "Custom domain" below, and the `<base href="/dushyant-mali/">` line in `404.html`.
+The same files also work on GitHub Pages: **Settings** > **Pages**, **Source: Deploy from a
+branch**, branch **main**, folder **/ (root)**. A project there lives in a sub-folder
+(`https://<account>.github.io/dushyant-mali/`), so change `<base href="/">` in `404.html` to
+`<base href="/dushyant-mali/">`, and update the addresses listed under "Custom domain" below to
+the GitHub Pages address (on a `github.io` address, `robots.txt` is never read, so submit the
+sitemap in Search Console). On a free GitHub account the repository must be public.
 
 ---
 
@@ -316,13 +352,13 @@ Notes:
 
 If you buy your own domain (for example `www.yourname.com`):
 
-1. On GitHub: **Settings** > **Pages** > **Custom domain**, type the domain and click **Save**.
-   GitHub adds a file called `CNAME` to the repository for you. Do not delete it.
-2. At the company where you bought the domain, add the DNS records GitHub asks for. For a
-   `www` address this is a `CNAME` record pointing to `rpmali.github.io`. GitHub's guide covers
-   every case: https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site
-3. When GitHub shows it is ready, tick **Enforce HTTPS**.
-4. Change `https://rpmali.github.io/dushyant-mali/` to your new address (for example
+1. On Vercel: open the project, then **Settings** > **Domains**, type the domain and click
+   **Add**. Vercel shows the DNS records it needs.
+2. At the company where you bought the domain, add those records (for a `www` address a
+   `CNAME` record pointing to `cname.vercel-dns.com`; Vercel's page shows the exact values).
+   Vercel's guide covers every case: https://vercel.com/docs/domains/working-with-domains/add-a-domain
+3. Vercel issues the HTTPS certificate itself once the records are found.
+4. Change `https://dushyant-mali.vercel.app/` to your new address (for example
    `https://www.yourname.com/`) in:
    - `assets/js/content.js`: `siteUrl` (for reference only; the page does not read it)
    - `index.html`: the `canonical`, `og:url`, `og:image` and `twitter:image` lines, and the
@@ -330,8 +366,7 @@ If you buy your own domain (for example `www.yourname.com`):
      at the end)
    - `robots.txt`: the `Sitemap:` line (keep `sitemap.xml` at the end)
    - `sitemap.xml`: the `<loc>` line
-5. In `404.html`, change `<base href="/dushyant-mali/">` to `<base href="/">`, because the site
-   now lives at the root of the domain.
+5. `404.html` keeps `<base href="/">`: the site still lives at the root of the domain.
 
 ---
 
@@ -354,8 +389,8 @@ If you buy your own domain (for example `www.yourname.com`):
   plain script rather than JSON so the site also works when opened as a file.
 - **Safe rendering.** All content is inserted with `textContent`/`createElement`; links from
   `content.js` are limited to `http(s)`, `mailto:` and `tel:`. A Content-Security-Policy meta tag
-  allows only the site's own scripts and styles, Google Fonts, images, and player frames from
-  `www.youtube-nocookie.com` and `player.vimeo.com`.
+  allows only the site's own scripts, styles and fonts (`style-src 'self'; font-src 'self'`),
+  images, and player frames from `www.youtube-nocookie.com` and `player.vimeo.com`.
 - **Videos load on demand.** Nothing is requested from YouTube or Vimeo until a card is clicked
   (apart from YouTube thumbnail images on `i.ytimg.com`). The player is a native `<dialog>`; its
   iframe is removed on close so playback stops.
@@ -366,16 +401,28 @@ If you buy your own domain (for example `www.yourname.com`):
   the description, the `og:`/`twitter:` tags and the Person block in `index.html`, the title and
   the wordmark text in the header of `404.html` (which has no JavaScript), and make a new
   `og-image.png` (it shows the name and role).
-- **Images.** `assets/img/og-image.png` (1200 x 630) and `assets/img/apple-touch-icon.png`
-  (180 x 180) are plain images; replace them with files of the same size and name if the design
-  changes. `favicon.svg` is the "DM" logo with the red recording dot.
+- **Images.** `assets/img/og-image.png` (1200 x 630, the name set in Unbounded) and
+  `assets/img/apple-touch-icon.png` (180 x 180) are plain images; replace them with files of the
+  same size and name if the design changes. `favicon.svg` is the "DM" logo with the red
+  recording dot.
+- **Fonts.** `index.html` preloads the three fonts the first screen needs (Unbounded 800,
+  Oswald 600, Inter 400); the `@font-face` rules for all six files are at the top of
+  `styles.css` with `font-display: swap`, and `--font-name` is the token the hero title and the
+  "Let's shoot" line use. Unbounded is wide ("DUSHYANT" is 7.2 em), so `--fs-hero` is
+  `clamp(2.125rem, 0.375rem + 8.5vw, 8rem)`: 34 px at 320 (the floor of the clamp) keeps the
+  word on one line, 128 px from 1440 gives two lines. The fit routine in `main.js` still scales
+  a longer name down rather than break it, but never below 55 % of that size: with this wide
+  face, a single word of more than about 15 letters would then break across two lines (and lose
+  the letter-by-letter animation). If a name like that is ever needed, lower the 0.55 floor in
+  `setupHeroFit` in `main.js`.
 - **Accessibility and motion.** Skip link, keyboard-friendly menu and player, labelled form fields
   with spoken error messages, and WCAG AA colour contrast. The button in the top-right corner of
   the hero is the animation switch (it pauses the timecode and turns the whole animation layer off
   or on), and all animation is switched off for visitors whose device asks for reduced motion.
 - **The animation layer is optional.** `index.html` loads, after `main.js`, the vendored
-  libraries (`assets/vendor/`), then `assets/js/hero-fx.js` (the WebGL light leak) and
-  `assets/js/motion.js`, with `assets/css/motion.css` after `styles.css`. `main.js` only tells
+  libraries (`assets/vendor/`, GSAP with ScrollTrigger and DrawSVGPlugin, Lenis), then
+  `assets/js/hero-fx.js` (the WebGL light leak) and `assets/js/motion.js`, with
+  `assets/css/motion.css` after `styles.css`. `main.js` only tells
   the layer what happened through events on `document` (`site:rendered`, `player:open` with a
   `proceed()` it may hold for at most 600 ms, `player:close`, `work:filter`, `contact:send`,
   `contact:invalid`) and exposes the rendered content as `window.SITE_RENDERED`. `motion.js`
@@ -395,8 +442,26 @@ If you buy your own domain (for example `www.yourname.com`):
   `window.__motionStats` counts hero and cursor frames so tests can prove the loops stop while
   the tab is hidden. `404.html` has no JavaScript: its letterbox bars and breathing REC dot are
   CSS only.
+- **The intro ("The Shot", section 4a of `motion.js`).** `runIntro()` reads
+  `motion.intro` from `content.js` (`"camera"`, `"countdown"` or `false`) and calls
+  `runCamera()` or `runCountdown()`. The camera is inline SVG built by `buildCamera()` (body,
+  grip, flash unit, six aperture blades that pivot open, two lens rings that counter-rotate); it
+  draws itself with DrawSVGPlugin when the plugin is present and simply fades in when it is not.
+  The overlay is `aria-hidden` above the fully rendered page, so the page's content, load and
+  search indexing are unaffected. One GSAP timeline holds the whole cut (targets in seconds, per
+  tier: scan, camera, autofocus, shutter, flash, develop, grow); the only flash is the white
+  layer that peaks at 0.85 opacity and shrinks onto the print, which is already in place
+  underneath, so the screen never brightens twice. The lite tier gets shorter cuts, no specular
+  sweep and an opacity crossfade instead of the develop filter. `done(opts)` reveals the hero:
+  `fromIntro` also drops the timeline bar in, `quick` (after a skip) compresses the whole
+  entrance to about 300 ms. The overlay is removed, and the hero shown, at the end, on a skip,
+  when the layer stops, or after a hard 6 s `setTimeout`, whichever comes first; the build
+  itself runs inside `safely()`. `heroEntrance()` is the kinetic name (letters from scale 2.4
+  and rotateX -60, the red/cream split copies and the light sweep are clones of the split words,
+  so they wrap exactly like the name and are removed with it); `heroTitleFx()` is the desktop
+  tilt and the 12-second sweep, paused off screen through `whenVisible()`.
 - **Motion details worth knowing.** `start()` builds the scroll layer, the hero's start states
-  and countdown, and the timeline bar in the same task as the page render (so nothing flashes),
+  and intro, and the timeline bar in the same task as the page render (so nothing flashes),
   and the set pieces, cursor, shutter and reveals one frame later, after the first paint. The
   switch button keeps one accessible name ("Turn animation off") and reports the state through
   `aria-pressed`, as `main.js` does. While motion is off, `ScrollTrigger.disable()` stops the
@@ -408,40 +473,42 @@ If you buy your own domain (for example `www.yourname.com`):
   wins. A direct link to a section (`.../#services`) is settled on again once the layer has
   built, because the film strip's pin spacer and the marquee band push the sections down after
   the browser's own jump; the switch never re-anchors.
-- **Size budget.** The animated version was built to a target of 260 KB of local JavaScript
-  (the three vendored libraries at their minified size plus `main.js`, `hero-fx.js` and
-  `motion.js` as written, unminified) and 220 KB of the site's own CSS and JavaScript.
+- **Size budget.** The animated version is built to a budget of 300 KB of local JavaScript
+  (the four vendored files at their minified size plus `main.js`, `hero-fx.js` and `motion.js`
+  as written, unminified), 250 KB of the site's own CSS and JavaScript, and 200 KB of fonts.
   `content.js` is counted separately because it is the owner's content and notes, not code
-  (about four fifths of it is comments). As shipped: libraries 136.2 KB, `main.js` 61.4 KB,
-  `hero-fx.js` 8.1 KB, `motion.js` 63.0 KB, so 268.6 KB of JavaScript, about 9 KB over the
-  target (the libraries and the foundation alone take 197.6 KB of it); own CSS and JavaScript
-  219.9 KB including `content.js`. The remaining overage is comments and readable layout in
-  `motion.js`; on the wire the files are gzipped (`motion.js` about 17 KB) and comments cost
-  nothing to parse, so the readable source was kept rather than stripped. Check with
-  `wc -c assets/vendor/*.js assets/js/*.js assets/css/*.css` before adding anything.
+  (about four fifths of it is comments). As shipped: libraries 140.6 KB (GSAP 72.9,
+  ScrollTrigger 44.6, DrawSVGPlugin 4.4, Lenis 18.7), `main.js` 61.4 KB, `hero-fx.js` 8.1 KB,
+  `motion.js` 89.9 KB, so 299.9 KB of JavaScript; own CSS and JavaScript 245.2 KB
+  (`styles.css` 49.0 KB, `motion.css` 36.9 KB) without `content.js` (15.1 KB); fonts 119.7 KB
+  for the six woff2 files. On the wire the files are gzipped and comments cost nothing to
+  parse, so the readable source is kept rather than stripped. Check with
+  `wc -c assets/vendor/*.js assets/js/*.js assets/css/*.css assets/fonts/*.woff2` before adding
+  anything.
 
 ### File map
 
 ```
 dushyant-mali/
 ├── index.html              the page (structure and link-preview tags)
-├── 404.html                "page not found", shown by GitHub Pages
+├── 404.html                "page not found", shown by Vercel for any missing address
 ├── assets/
-│   ├── css/styles.css      all styling; colours and sizes are variables at the top
+│   ├── css/styles.css      all styling; fonts, colours and sizes are at the top
 │   ├── css/motion.css      styles of the animated version (only active when it is on)
+│   ├── fonts/              Inter, Oswald and Unbounded (woff2, latin), with LICENSES.md
 │   ├── js/content.js       YOUR CONTENT: the only file to edit day to day
 │   ├── js/main.js          builds the page from content.js
-│   ├── js/motion.js        the animation layer (countdown, hero, timeline bar, cursor, reveals, section set pieces)
+│   ├── js/motion.js        the animation layer (the camera intro, the countdown, hero, timeline bar, cursor, reveals, section set pieces)
 │   ├── js/hero-fx.js       the WebGL light-leak background behind your name
-│   ├── vendor/             GSAP, ScrollTrigger and Lenis, with LICENSES.md
+│   ├── vendor/             GSAP, ScrollTrigger, DrawSVGPlugin and Lenis, with LICENSES.md
 │   ├── video/              (create it) your short clips for showreel.clips and projects[].preview
 │   └── img/
 │       ├── favicon.svg          browser tab icon
 │       ├── apple-touch-icon.png home-screen icon (iPhone and iPad)
 │       └── og-image.png         picture shown when the link is shared
-├── robots.txt              only read by search engines once the site is on its own domain
+├── robots.txt              points search engines at the sitemap
 ├── sitemap.xml             the site's address for search engines (submit it in Search Console)
-├── .nojekyll               tells GitHub Pages to serve the files as they are
+├── .nojekyll               only matters on GitHub Pages (serve the files as they are)
 ├── .gitignore              keeps system and editor clutter out of the repository
 └── README.md               this guide
 ```
